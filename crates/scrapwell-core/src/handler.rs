@@ -60,6 +60,44 @@ struct ListMemoriesParams {
     depth: Option<u32>,
 }
 
+// ---------- Phase 2 パラメータ型 ----------
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+struct UpdateEntityParams {
+    /// 対象 Entity の ID（ULID 形式）
+    id: String,
+    /// 新しいスコープ（任意）
+    scope: Option<String>,
+    /// 新しい説明（任意）
+    description: Option<String>,
+    /// 新しいタグ（任意、全置換）
+    tags: Option<Vec<String>>,
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+struct DeleteEntityParams {
+    /// 対象 Entity の ID（ULID 形式）
+    id: String,
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+struct UpdateMemoryParams {
+    /// 対象ドキュメントの ID（ULID 形式）
+    id: String,
+    /// 新しいタイトル（任意）
+    title: Option<String>,
+    /// 新しい本文（任意）
+    content: Option<String>,
+    /// 新しいタグ（任意、全置換）
+    tags: Option<Vec<String>>,
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+struct DeleteMemoryParams {
+    /// 対象ドキュメントの ID（ULID 形式）
+    id: String,
+}
+
 // ---------- ツリー整形 ----------
 
 fn format_tree(node: &crate::model::TreeNode, is_root: bool) -> String {
@@ -130,7 +168,9 @@ where
         Entity は知識の対象（技術・ライブラリ・プロジェクト等）を表す。\n\
         保存前にまず list_memories で既存の Entity 一覧を確認し、\n\
         類似した Entity が既に存在しないか確認すること。\n\
-        name は kebab-case（小文字・数字・ハイフンのみ）で指定。")]
+        name は kebab-case（小文字・数字・ハイフンのみ）で指定。\n\
+        類似名が存在する場合は error='similar_entity_exists' で候補を返す。\n\
+        意図的に別 Entity として作成したい場合は無視してよい。")]
     fn create_entity(
         &self,
         Parameters(p): Parameters<CreateEntityParams>,
@@ -145,9 +185,50 @@ where
                 ))
             }
         };
+        match self.service.create_entity(p.name, scope, p.description, p.tags.unwrap_or_default()) {
+            Ok(id) => Ok(serde_json::json!({ "id": id.0 }).to_string()),
+            Err(crate::error::ScrapwellError::SimilarEntityExists { name, suggestions }) => {
+                Err(serde_json::json!({
+                    "error": "similar_entity_exists",
+                    "message": format!("Entity '{}' is similar to existing entities", name),
+                    "suggestions": suggestions,
+                }).to_string())
+            }
+            Err(e) => Err(e.to_string()),
+        }
+    }
+
+    #[tool(description = "既存 Entity の部分更新。指定したフィールドのみ変更される。\n\
+        scope・description・tags のうち指定したものだけ更新する。")]
+    fn update_entity(
+        &self,
+        Parameters(p): Parameters<UpdateEntityParams>,
+    ) -> Result<String, String> {
+        let scope = p
+            .scope
+            .as_deref()
+            .map(|s| match s {
+                "knowledge" => Ok(Scope::Knowledge),
+                "project" => Ok(Scope::Project),
+                other => Err(format!("invalid scope '{}'", other)),
+            })
+            .transpose()?;
+
         self.service
-            .create_entity(p.name, scope, p.description, p.tags.unwrap_or_default())
-            .map(|id| serde_json::json!({ "id": id.0 }).to_string())
+            .update_entity(p.id, scope, p.description, p.tags)
+            .map(|_| serde_json::json!({ "ok": true }).to_string())
+            .map_err(|e| e.to_string())
+    }
+
+    #[tool(description = "Entity を削除する。配下のドキュメント・Topic ディレクトリもカスケード削除される。\n\
+        この操作は取り消せない。")]
+    fn delete_entity(
+        &self,
+        Parameters(p): Parameters<DeleteEntityParams>,
+    ) -> Result<String, String> {
+        self.service
+            .delete_entity(p.id)
+            .map(|_| serde_json::json!({ "ok": true }).to_string())
             .map_err(|e| e.to_string())
     }
 
@@ -176,6 +257,30 @@ where
                 p.tags.unwrap_or_default(),
             )
             .map(|id| serde_json::json!({ "id": id.0 }).to_string())
+            .map_err(|e| e.to_string())
+    }
+
+    #[tool(description = "既存ドキュメントの部分更新。指定したフィールドのみ変更される。\n\
+        title・content・tags のうち指定したものだけ更新する。")]
+    fn update_memory(
+        &self,
+        Parameters(p): Parameters<UpdateMemoryParams>,
+    ) -> Result<String, String> {
+        self.service
+            .update_memory(p.id, p.title, p.content, p.tags)
+            .map(|_| serde_json::json!({ "ok": true }).to_string())
+            .map_err(|e| e.to_string())
+    }
+
+    #[tool(description = "ドキュメントを削除する。Markdown ファイルとインデックスエントリを除去する。\n\
+        この操作は取り消せない。")]
+    fn delete_memory(
+        &self,
+        Parameters(p): Parameters<DeleteMemoryParams>,
+    ) -> Result<String, String> {
+        self.service
+            .delete_memory(p.id)
+            .map(|_| serde_json::json!({ "ok": true }).to_string())
             .map_err(|e| e.to_string())
     }
 
@@ -482,6 +587,142 @@ mod tests {
         assert!(text.contains("elasticsearch/"), "entity should appear");
         assert!(text.contains("(2 documents)"), "doc count should be 2");
         assert!(text.contains("mapping/"), "topic should appear");
+
+        client.cancel().await?;
+        Ok(())
+    }
+
+    // ---------- Phase 2: update_entity ----------
+
+    #[tokio::test]
+    async fn update_entity_tool_persists_changes() -> Result<()> {
+        let dir = TempDir::new()?;
+        let client = start!(dir);
+
+        let create_result = tool!(
+            client, "create_entity",
+            serde_json::json!({"name": "rust", "scope": "knowledge", "description": "old"})
+        );
+        let entity: serde_json::Value = serde_json::from_str(&text_of(&create_result))?;
+        let id = entity["id"].as_str().unwrap();
+
+        let update_result = tool!(
+            client, "update_entity",
+            serde_json::json!({"id": id, "scope": "project", "description": "new description"})
+        );
+        assert_ne!(update_result.is_error, Some(true));
+
+        // list_memories で確認（scope はツリーに出ないが、エラーなしであれば OK）
+        let list_result = tool!(client, "list_memories", serde_json::json!({}));
+        assert_ne!(list_result.is_error, Some(true));
+        assert!(text_of(&list_result).contains("rust/"));
+
+        client.cancel().await?;
+        Ok(())
+    }
+
+    // ---------- Phase 2: delete_entity ----------
+
+    #[tokio::test]
+    async fn delete_entity_tool_removes_entity() -> Result<()> {
+        let dir = TempDir::new()?;
+        let client = start!(dir);
+
+        let create_result = tool!(
+            client, "create_entity",
+            serde_json::json!({"name": "rust", "scope": "knowledge"})
+        );
+        let entity: serde_json::Value = serde_json::from_str(&text_of(&create_result))?;
+        let id = entity["id"].as_str().unwrap();
+
+        let delete_result = tool!(
+            client, "delete_entity",
+            serde_json::json!({"id": id})
+        );
+        assert_ne!(delete_result.is_error, Some(true));
+
+        // list_memories で消えていることを確認
+        let list_result = tool!(client, "list_memories", serde_json::json!({}));
+        assert_eq!(text_of(&list_result), "", "entity should be gone");
+
+        client.cancel().await?;
+        Ok(())
+    }
+
+    // ---------- Phase 2: update_memory ----------
+
+    #[tokio::test]
+    async fn update_memory_tool_persists_changes() -> Result<()> {
+        let dir = TempDir::new()?;
+        let client = start!(dir);
+
+        tool!(client, "create_entity",
+            serde_json::json!({"name": "rust", "scope": "knowledge"}));
+
+        let save_result = tool!(client, "save_memory", serde_json::json!({
+            "entity": "rust", "name": "anyhow", "title": "Old Title", "content": "Old content"
+        }));
+        let saved: serde_json::Value = serde_json::from_str(&text_of(&save_result))?;
+        let id = saved["id"].as_str().unwrap().to_string();
+
+        let update_result = tool!(client, "update_memory", serde_json::json!({
+            "id": id, "title": "New Title", "content": "New content"
+        }));
+        assert_ne!(update_result.is_error, Some(true));
+
+        // get_memory で更新内容を確認
+        let get_result = tool!(client, "get_memory", serde_json::json!({"id": id}));
+        let entry: serde_json::Value = serde_json::from_str(&text_of(&get_result))?;
+        assert_eq!(entry["title"], "New Title");
+        assert_eq!(entry["content"], "New content");
+
+        client.cancel().await?;
+        Ok(())
+    }
+
+    // ---------- Phase 2: delete_memory ----------
+
+    #[tokio::test]
+    async fn delete_memory_tool_removes_document() -> Result<()> {
+        let dir = TempDir::new()?;
+        let client = start!(dir);
+
+        tool!(client, "create_entity",
+            serde_json::json!({"name": "rust", "scope": "knowledge"}));
+
+        let save_result = tool!(client, "save_memory", serde_json::json!({
+            "entity": "rust", "name": "anyhow", "title": "Anyhow", "content": "Content"
+        }));
+        let saved: serde_json::Value = serde_json::from_str(&text_of(&save_result))?;
+        let id = saved["id"].as_str().unwrap().to_string();
+
+        let delete_result = tool!(client, "delete_memory", serde_json::json!({"id": id}));
+        assert_ne!(delete_result.is_error, Some(true));
+
+        let get_result = tool!(client, "get_memory", serde_json::json!({"id": id}));
+        assert_eq!(get_result.is_error, Some(true), "should return error after deletion");
+
+        client.cancel().await?;
+        Ok(())
+    }
+
+    // ---------- Phase 2: 類似名チェック ----------
+
+    #[tokio::test]
+    async fn similar_entity_name_returns_structured_error() -> Result<()> {
+        let dir = TempDir::new()?;
+        let client = start!(dir);
+
+        tool!(client, "create_entity",
+            serde_json::json!({"name": "elasticsearch", "scope": "knowledge"}));
+
+        let result = tool!(client, "create_entity",
+            serde_json::json!({"name": "elastic-search", "scope": "knowledge"}));
+
+        assert_eq!(result.is_error, Some(true));
+        let json: serde_json::Value = serde_json::from_str(&text_of(&result))?;
+        assert_eq!(json["error"], "similar_entity_exists");
+        assert!(json["suggestions"].as_array().unwrap().contains(&serde_json::json!("elasticsearch")));
 
         client.cancel().await?;
         Ok(())
