@@ -1,6 +1,6 @@
 use std::{path::PathBuf, sync::Arc};
 
-use clap::{Parser, Subcommand};
+use clap::Parser;
 use rmcp::{transport::stdio, ServiceExt};
 use scrapwell_core::{
     index::tantivy_index::TantivySearchIndex, service::MemoryService, store::fs::FsMemoryStore,
@@ -8,23 +8,23 @@ use scrapwell_core::{
 };
 use serde::Deserialize;
 
+mod cli;
+
 // ---------- CLI ----------
 
 #[derive(Parser)]
-#[command(name = "scrapwell", about = "MCP memory server")]
+#[command(
+    name = "scrapwell",
+    about = "MCP memory server for LLM agents",
+    arg_required_else_help = true
+)]
 struct Cli {
     /// メモリのルートディレクトリ（デフォルト: ~/.memory）
     #[arg(long, env = "SCRAPWELL_ROOT")]
     root: Option<PathBuf>,
 
     #[command(subcommand)]
-    command: Option<Commands>,
-}
-
-#[derive(Subcommand)]
-enum Commands {
-    /// 全文検索インデックスを再構築して終了する
-    Rebuild,
+    command: cli::Commands,
 }
 
 // ---------- Config ----------
@@ -32,7 +32,6 @@ enum Commands {
 /// ~/.config/scrapwell/config.toml から読み込む設定
 #[derive(Deserialize, Default)]
 struct Config {
-    /// メモリのルートディレクトリ
     root: Option<PathBuf>,
 }
 
@@ -64,22 +63,28 @@ fn resolve_root(cli_root: Option<PathBuf>) -> PathBuf {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let cli = Cli::parse();
-    let root = resolve_root(cli.root);
+    let cli_args = Cli::parse();
+    let root = resolve_root(cli_args.root);
 
     let store = FsMemoryStore::new(root.clone())?;
     let index = TantivySearchIndex::new(root.join("index"))?;
     let service = Arc::new(MemoryService::new(store, index));
 
-    match cli.command {
-        Some(Commands::Rebuild) => {
-            eprintln!("Rebuilding search index from {:?} ...", root);
+    match cli_args.command {
+        cli::Commands::Serve => {
+            let handler = ScrapwellHandler::new(Arc::clone(&service));
+            handler.serve(stdio()).await?.waiting().await?;
+        }
+        cli::Commands::Rebuild { target: _ } => {
+            eprintln!("Rebuilding index from {:?} ...", root);
             let count = service.rebuild_index()?;
             eprintln!("Done: {} document(s) indexed.", count);
         }
-        None => {
-            let handler = ScrapwellHandler::new(Arc::clone(&service));
-            handler.serve(stdio()).await?.waiting().await?;
+        cli::Commands::Entity { cmd } => {
+            cli::run_entity(cmd, service)?;
+        }
+        cli::Commands::Memory { cmd } => {
+            cli::run_memory(cmd, service)?;
         }
     }
 

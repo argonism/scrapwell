@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+anyhow = "1"
+serde_json = "1"
 scrapwell-core = { path = "../scrapwell-core" }
 clap = { version = "4", features = ["derive", "env"] }
 dirs = "5"

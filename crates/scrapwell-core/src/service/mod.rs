@@ -165,6 +165,17 @@ impl<S: MemoryStore, I: SearchIndex> MemoryService<S, I> {
         })
     }
 
+    pub fn list_entities(&self) -> Result<Vec<EntityMeta>> {
+        let names = self.store.list_entity_names()?;
+        let mut entities = Vec::with_capacity(names.len());
+        for name in &names {
+            if let Some(entity) = self.store.get_entity_by_name(name)? {
+                entities.push(entity);
+            }
+        }
+        Ok(entities)
+    }
+
     pub fn rebuild_index(&self) -> Result<usize> {
         let entries = self.store.iter_all()?;
         let count = entries.len();
