@@ -11,8 +11,8 @@ use serde::de::DeserializeOwned;
 use crate::{
     error::{Result, ScrapwellError},
     model::{
-        DocumentFrontmatter, EntityFrontmatter, EntityMeta, MemoryEntry, MemoryId, Scope,
-        TreeNode,
+        DocumentFrontmatter, EntityFrontmatter, EntityMeta, EntityPatch, MemoryEntry, MemoryId,
+        MemoryPatch, Scope, TreeNode,
     },
     path::MemoryPath,
 };
@@ -402,6 +402,220 @@ impl MemoryStore for FsMemoryStore {
         )?;
         Ok(count == 0)
     }
+
+    fn list_entity_names(&self) -> Result<Vec<String>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare("SELECT name FROM entities ORDER BY name")?;
+        let result = stmt
+            .query_map([], |row| row.get::<_, String>(0))?
+            .collect::<rusqlite::Result<Vec<String>>>()?;
+        Ok(result)
+    }
+
+    fn update_entity(&self, id: &MemoryId, patch: &EntityPatch) -> Result<()> {
+        // 1. 現在の Entity 情報を SQLite から取得
+        let (name, current_scope_str, current_description, current_tags_json, created_at_str) = {
+            let conn = self.conn.lock().unwrap();
+            conn.query_row(
+                "SELECT name, scope, description, tags, created_at FROM entities WHERE id = ?1",
+                params![id.0],
+                |row| {
+                    Ok((
+                        row.get::<_, String>(0)?,
+                        row.get::<_, String>(1)?,
+                        row.get::<_, Option<String>>(2)?,
+                        row.get::<_, String>(3)?,
+                        row.get::<_, String>(4)?,
+                    ))
+                },
+            )
+            .map_err(|e| match e {
+                rusqlite::Error::QueryReturnedNoRows => ScrapwellError::NotFound(id.0.clone()),
+                other => ScrapwellError::Database(other),
+            })?
+        };
+
+        // 2. パッチを適用
+        let new_scope = patch.scope.unwrap_or_else(|| str_to_scope(&current_scope_str).unwrap());
+        let new_description = patch
+            .description
+            .as_ref()
+            .map(|s| s.clone())
+            .or(current_description);
+        let new_tags = patch
+            .tags
+            .as_ref()
+            .cloned()
+            .unwrap_or_else(|| json_to_tags(&current_tags_json).unwrap_or_default());
+        let created_at = parse_datetime(&created_at_str)?;
+        let now = chrono::Utc::now();
+
+        // 3. _entity.md を更新
+        let entity_dir = self.root.join("entities").join(&name);
+        let fm = EntityFrontmatter {
+            id: id.0.clone(),
+            scope: new_scope,
+            tags: new_tags.clone(),
+            created_at,
+            updated_at: now,
+        };
+        let body = new_description.as_deref().unwrap_or("");
+        std::fs::write(entity_dir.join("_entity.md"), render_md(&fm, body)?)?;
+
+        // 4. SQLite を更新
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
+            "UPDATE entities SET scope=?1, description=?2, tags=?3, updated_at=?4 WHERE id=?5",
+            params![
+                scope_to_str(new_scope),
+                new_description,
+                tags_to_json(&new_tags)?,
+                now.to_rfc3339(),
+                id.0,
+            ],
+        )?;
+
+        Ok(())
+    }
+
+    fn delete_entity(&self, id: &MemoryId) -> Result<()> {
+        // 1. Entity 名を取得（ディレクトリパスの構築に必要）
+        let entity_name: String = {
+            let conn = self.conn.lock().unwrap();
+            conn.query_row(
+                "SELECT name FROM entities WHERE id = ?1",
+                params![id.0],
+                |row| row.get(0),
+            )
+            .map_err(|e| match e {
+                rusqlite::Error::QueryReturnedNoRows => ScrapwellError::NotFound(id.0.clone()),
+                other => ScrapwellError::Database(other),
+            })?
+        };
+
+        // 2. SQLite から削除（ON DELETE CASCADE でドキュメントも削除される）
+        {
+            let conn = self.conn.lock().unwrap();
+            conn.execute("DELETE FROM entities WHERE id = ?1", params![id.0])?;
+        }
+
+        // 3. エンティティディレクトリをまるごと削除
+        let entity_dir = self.root.join("entities").join(&entity_name);
+        if entity_dir.exists() {
+            std::fs::remove_dir_all(&entity_dir)?;
+        }
+
+        Ok(())
+    }
+
+    fn update(&self, id: &MemoryId, patch: &MemoryPatch) -> Result<()> {
+        // 1. ドキュメントのメタデータを SQLite から取得
+        let (entity_name, topic, name, current_title, current_tags_json, created_at_str) = {
+            let conn = self.conn.lock().unwrap();
+            conn.query_row(
+                "SELECT e.name, d.topic, d.name, d.title, d.tags, d.created_at
+                 FROM documents d JOIN entities e ON d.entity_id = e.id
+                 WHERE d.id = ?1",
+                params![id.0],
+                |row| {
+                    Ok((
+                        row.get::<_, String>(0)?,
+                        row.get::<_, Option<String>>(1)?,
+                        row.get::<_, String>(2)?,
+                        row.get::<_, String>(3)?,
+                        row.get::<_, String>(4)?,
+                        row.get::<_, String>(5)?,
+                    ))
+                },
+            )
+            .map_err(|e| match e {
+                rusqlite::Error::QueryReturnedNoRows => ScrapwellError::NotFound(id.0.clone()),
+                other => ScrapwellError::Database(other),
+            })?
+        };
+
+        // 2. Markdown ファイルから現在の本文を読む
+        let mem_path = MemoryPath::new(&entity_name, topic.as_deref(), &name)?;
+        let fs_path = mem_path.to_fs_path(&self.root);
+        let file_content = std::fs::read_to_string(&fs_path)?;
+        let (_fm, current_content) = parse_frontmatter::<DocumentFrontmatter>(&file_content)?;
+
+        // 3. パッチを適用
+        let new_title = patch.title.as_ref().unwrap_or(&current_title).clone();
+        let new_content = patch.content.as_ref().unwrap_or(&current_content).clone();
+        let new_tags = patch
+            .tags
+            .as_ref()
+            .cloned()
+            .unwrap_or_else(|| json_to_tags(&current_tags_json).unwrap_or_default());
+        let created_at = parse_datetime(&created_at_str)?;
+        let now = chrono::Utc::now();
+
+        // 4. Markdown ファイルを更新
+        let fm = DocumentFrontmatter {
+            id: id.0.clone(),
+            title: new_title.clone(),
+            tags: new_tags.clone(),
+            created_at,
+            updated_at: now,
+        };
+        std::fs::write(&fs_path, render_md(&fm, &new_content)?)?;
+
+        // 5. SQLite を更新
+        {
+            let conn = self.conn.lock().unwrap();
+            conn.execute(
+                "UPDATE documents SET title=?1, tags=?2, updated_at=?3 WHERE id=?4",
+                params![
+                    new_title,
+                    tags_to_json(&new_tags)?,
+                    now.to_rfc3339(),
+                    id.0,
+                ],
+            )?;
+        }
+
+        Ok(())
+    }
+
+    fn delete(&self, id: &MemoryId) -> Result<()> {
+        // 1. ドキュメントの場所を SQLite から取得
+        let (entity_name, topic, name): (String, Option<String>, String) = {
+            let conn = self.conn.lock().unwrap();
+            conn.query_row(
+                "SELECT e.name, d.topic, d.name
+                 FROM documents d JOIN entities e ON d.entity_id = e.id
+                 WHERE d.id = ?1",
+                params![id.0],
+                |row| {
+                    Ok((
+                        row.get::<_, String>(0)?,
+                        row.get::<_, Option<String>>(1)?,
+                        row.get::<_, String>(2)?,
+                    ))
+                },
+            )
+            .map_err(|e| match e {
+                rusqlite::Error::QueryReturnedNoRows => ScrapwellError::NotFound(id.0.clone()),
+                other => ScrapwellError::Database(other),
+            })?
+        };
+
+        // 2. SQLite から削除
+        {
+            let conn = self.conn.lock().unwrap();
+            conn.execute("DELETE FROM documents WHERE id = ?1", params![id.0])?;
+        }
+
+        // 3. Markdown ファイルを削除
+        let path = MemoryPath::new(&entity_name, topic.as_deref(), &name)?;
+        let fs_path = path.to_fs_path(&self.root);
+        if fs_path.exists() {
+            std::fs::remove_file(&fs_path)?;
+        }
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -714,5 +928,122 @@ mod tests {
 
         assert_eq!(parsed.id, fm.id);
         assert_eq!(got_body, "");
+    }
+
+    // ---------- Phase 2: list_entity_names ----------
+
+    #[test]
+    fn list_entity_names_returns_all() {
+        let (store, _dir) = make_store();
+        store.save_entity(&sample_entity("rust")).unwrap();
+        store.save_entity(&sample_entity("elasticsearch")).unwrap();
+
+        let mut names = store.list_entity_names().unwrap();
+        names.sort();
+        assert_eq!(names, vec!["elasticsearch", "rust"]);
+    }
+
+    // ---------- Phase 2: update_entity ----------
+
+    #[test]
+    fn update_entity_changes_fields() {
+        let (store, dir) = make_store();
+        let entity = sample_entity("rust");
+        let id = entity.id.clone();
+        store.save_entity(&entity).unwrap();
+
+        let patch = EntityPatch {
+            scope: Some(Scope::Project),
+            description: Some("updated description".to_string()),
+            tags: Some(vec!["new-tag".to_string()]),
+        };
+        store.update_entity(&id, &patch).unwrap();
+
+        let updated = store.get_entity_by_name("rust").unwrap().unwrap();
+        assert_eq!(updated.scope, Scope::Project);
+        assert_eq!(updated.description, Some("updated description".to_string()));
+        assert_eq!(updated.tags, vec!["new-tag".to_string()]);
+
+        // _entity.md にも反映されているか確認
+        let content = std::fs::read_to_string(
+            dir.path().join("entities/rust/_entity.md")
+        ).unwrap();
+        assert!(content.contains("scope: project"));
+        assert!(content.contains("updated description"));
+    }
+
+    // ---------- Phase 2: delete_entity ----------
+
+    #[test]
+    fn delete_entity_removes_directory_and_records() {
+        let (store, dir) = make_store();
+        let entity = sample_entity("rust");
+        let id = entity.id.clone();
+        store.save_entity(&entity).unwrap();
+        store.save(&sample_entry("rust", "anyhow", None)).unwrap();
+
+        store.delete_entity(&id).unwrap();
+
+        // ディレクトリが消えている
+        assert!(!dir.path().join("entities/rust").exists());
+        // SQLite からも消えている
+        assert!(store.get_entity_by_name("rust").unwrap().is_none());
+        // ドキュメントの一意性チェックを再利用：name が再び使えるようになっている
+        assert!(store.check_name_unique("anyhow").unwrap());
+    }
+
+    // ---------- Phase 2: update document ----------
+
+    #[test]
+    fn update_document_changes_content() {
+        let (store, _dir) = make_store();
+        store.save_entity(&sample_entity("rust")).unwrap();
+
+        let entry = MemoryEntry {
+            id: MemoryId::new(),
+            entity: "rust".to_string(),
+            topic: None,
+            name: "anyhow".to_string(),
+            title: "Old Title".to_string(),
+            content: "Old content".to_string(),
+            tags: vec![],
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        };
+        let id = entry.id.clone();
+        store.save(&entry).unwrap();
+
+        let patch = MemoryPatch {
+            title: Some("New Title".to_string()),
+            content: Some("New content".to_string()),
+            tags: Some(vec!["updated".to_string()]),
+        };
+        store.update(&id, &patch).unwrap();
+
+        let updated = store.get(&id).unwrap().unwrap();
+        assert_eq!(updated.title, "New Title");
+        assert_eq!(updated.content, "New content");
+        assert_eq!(updated.tags, vec!["updated".to_string()]);
+    }
+
+    // ---------- Phase 2: delete document ----------
+
+    #[test]
+    fn delete_document_removes_file_and_record() {
+        let (store, dir) = make_store();
+        store.save_entity(&sample_entity("rust")).unwrap();
+
+        let entry = sample_entry("rust", "anyhow", None);
+        let id = entry.id.clone();
+        store.save(&entry).unwrap();
+
+        store.delete(&id).unwrap();
+
+        // ファイルが消えている
+        assert!(!dir.path().join("entities/rust/anyhow.md").exists());
+        // SQLite からも消えている
+        assert!(store.get(&id).unwrap().is_none());
+        // 名前が再利用可能
+        assert!(store.check_name_unique("anyhow").unwrap());
     }
 }
