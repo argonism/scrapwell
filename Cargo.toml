@@ -1,0 +1,3 @@
+[workspace]
+members = ["crates/scrapwell-core", "crates/scrapwell"]
+resolver = "2"
