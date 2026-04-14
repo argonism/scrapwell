@@ -616,6 +616,60 @@ impl MemoryStore for FsMemoryStore {
 
         Ok(())
     }
+
+    fn iter_all(&self) -> Result<Vec<MemoryEntry>> {
+        // 関数スコープで conn/stmt を宣言し、collect 後に明示的に drop してから
+        // ファイル読み込みを行う（ネストブロック内の ? は一時値の借用問題を引き起こすため回避）
+        type Row = (String, String, Option<String>, String, String, String, String, String);
+
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT d.id, e.name, d.topic, d.name, d.title, d.tags, d.created_at, d.updated_at
+             FROM documents d JOIN entities e ON d.entity_id = e.id
+             ORDER BY e.name, d.topic, d.name",
+        )?;
+        let rows: Vec<Row> = stmt
+            .query_map([], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, Option<String>>(2)?,
+                    row.get::<_, String>(3)?,
+                    row.get::<_, String>(4)?,
+                    row.get::<_, String>(5)?,
+                    row.get::<_, String>(6)?,
+                    row.get::<_, String>(7)?,
+                ))
+            })?
+            .collect::<rusqlite::Result<Vec<_>>>()?;
+        // ? のセミコロンで一時値が破棄された後にロックを解放
+        drop(stmt);
+        drop(conn);
+
+        let mut entries = Vec::with_capacity(rows.len());
+        for (doc_id, entity_name, topic, name, title, tags_json, created_str, updated_str) in rows {
+            let path = MemoryPath::new(&entity_name, topic.as_deref(), &name)?;
+            let fs_path = path.to_fs_path(&self.root);
+            // ファイルが見つからない場合はスキップ（SQLite と FS の不整合）
+            let file_content = match std::fs::read_to_string(&fs_path) {
+                Ok(c) => c,
+                Err(_) => continue,
+            };
+            let (_fm, content) = parse_frontmatter::<DocumentFrontmatter>(&file_content)?;
+            entries.push(MemoryEntry {
+                id: MemoryId(doc_id),
+                entity: entity_name,
+                topic,
+                name,
+                title,
+                content,
+                tags: json_to_tags(&tags_json)?,
+                created_at: parse_datetime(&created_str)?,
+                updated_at: parse_datetime(&updated_str)?,
+            });
+        }
+        Ok(entries)
+    }
 }
 
 #[cfg(test)]
@@ -1045,5 +1099,33 @@ mod tests {
         assert!(store.get(&id).unwrap().is_none());
         // 名前が再利用可能
         assert!(store.check_name_unique("anyhow").unwrap());
+    }
+
+    // ---------- Phase 4: iter_all ----------
+
+    #[test]
+    fn iter_all_returns_all_documents_with_content() {
+        let (store, _dir) = make_store();
+        store.save_entity(&sample_entity("rust")).unwrap();
+        store.save_entity(&sample_entity("elasticsearch")).unwrap();
+
+        store.save(&sample_entry("rust", "anyhow", None)).unwrap();
+        store.save(&sample_entry("rust", "thiserror", None)).unwrap();
+        store.save(&sample_entry("elasticsearch", "nested-vector", Some("mapping"))).unwrap();
+
+        let entries = store.iter_all().unwrap();
+        assert_eq!(entries.len(), 3);
+
+        // コンテンツが読み込まれている
+        for entry in &entries {
+            assert!(!entry.content.is_empty(), "content should be loaded for {}", entry.name);
+        }
+    }
+
+    #[test]
+    fn iter_all_on_empty_store_returns_empty() {
+        let (store, _dir) = make_store();
+        let entries = store.iter_all().unwrap();
+        assert!(entries.is_empty());
     }
 }

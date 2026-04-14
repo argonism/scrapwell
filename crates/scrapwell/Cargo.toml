@@ -5,6 +5,9 @@ edition = "2021"
 
 [dependencies]
 scrapwell-core = { path = "../scrapwell-core" }
+clap = { version = "4", features = ["derive", "env"] }
 dirs = "5"
 rmcp = { version = "1.3", features = ["server", "transport-io"] }
+serde = { version = "1", features = ["derive"] }
 tokio = { version = "1", features = ["full"] }
+toml = "0.8"

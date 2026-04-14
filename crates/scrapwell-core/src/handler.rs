@@ -60,7 +60,10 @@ struct ListMemoriesParams {
     depth: Option<u32>,
 }
 
-// ---------- Phase 3 パラメータ型 ----------
+// ---------- Phase 3/4 パラメータ型 ----------
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+struct RebuildIndexParams {}
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
 struct SearchMemoryParams {
@@ -281,6 +284,20 @@ where
         self.service
             .update_memory(p.id, p.title, p.content, p.tags)
             .map(|_| serde_json::json!({ "ok": true }).to_string())
+            .map_err(|e| e.to_string())
+    }
+
+    #[tool(description = "検索インデックスを全件再構築する。\n\
+        Tantivy インデックスが破損した場合や手動でファイルを編集した後に実行する。\n\
+        SQLite に記録された全ドキュメントを読み直してインデックスを作り直す。\n\
+        完了後に rebuilt（再インデックス件数）を返す。")]
+    fn rebuild_index(
+        &self,
+        Parameters(_): Parameters<RebuildIndexParams>,
+    ) -> Result<String, String> {
+        self.service
+            .rebuild_index()
+            .map(|count| serde_json::json!({ "ok": true, "rebuilt": count }).to_string())
             .map_err(|e| e.to_string())
     }
 

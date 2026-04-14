@@ -20,4 +20,7 @@ pub trait MemoryStore: Send + Sync {
     fn delete(&self, id: &MemoryId) -> Result<()>;
     fn list_tree(&self, entity: Option<&str>, depth: u32) -> Result<TreeNode>;
     fn check_name_unique(&self, name: &str) -> Result<bool>;
+
+    /// 全ドキュメントを取得する（インデックス再構築用）
+    fn iter_all(&self) -> Result<Vec<MemoryEntry>>;
 }

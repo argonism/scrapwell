@@ -149,6 +149,13 @@ impl<S: MemoryStore, I: SearchIndex> MemoryService<S, I> {
     ) -> Result<Vec<SearchHit>> {
         self.index.search(&SearchQuery { query, entity, limit })
     }
+
+    pub fn rebuild_index(&self) -> Result<usize> {
+        let entries = self.store.iter_all()?;
+        let count = entries.len();
+        self.index.rebuild(&mut entries.into_iter())?;
+        Ok(count)
+    }
 }
 
 #[cfg(test)]
@@ -451,6 +458,27 @@ mod tests {
         assert_eq!(updated.title, "New Title");
         assert_eq!(updated.content, "New content");
         assert_eq!(updated.tags, vec!["updated".to_string()]);
+    }
+
+    // ---------- Phase 4: rebuild_index ----------
+
+    #[test]
+    fn rebuild_index_returns_document_count() {
+        let (svc, _dir) = make_service();
+
+        svc.create_entity("rust".to_string(), Scope::Knowledge, None, vec![]).unwrap();
+        svc.save_memory("rust".to_string(), "anyhow".to_string(), "Anyhow".to_string(), "Content A".to_string(), None, vec![]).unwrap();
+        svc.save_memory("rust".to_string(), "thiserror".to_string(), "Thiserror".to_string(), "Content B".to_string(), None, vec![]).unwrap();
+
+        let count = svc.rebuild_index().unwrap();
+        assert_eq!(count, 2, "rebuild should report number of indexed documents");
+    }
+
+    #[test]
+    fn rebuild_index_on_empty_vault_returns_zero() {
+        let (svc, _dir) = make_service();
+        let count = svc.rebuild_index().unwrap();
+        assert_eq!(count, 0);
     }
 
     // ---------- Phase 2: delete_memory ----------
