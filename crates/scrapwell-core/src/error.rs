@@ -9,6 +9,9 @@ pub enum ScrapwellError {
     #[error("duplicate name: {0}")]
     DuplicateName(String),
 
+    #[error("similar entity exists: '{name}' is similar to existing entities: {suggestions:?}")]
+    SimilarEntityExists { name: String, suggestions: Vec<String> },
+
     #[error("io error: {0}")]
     Io(#[from] std::io::Error),
 

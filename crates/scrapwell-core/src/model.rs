@@ -80,6 +80,13 @@ pub struct TreeNode {
     pub children: Vec<TreeNode>,
 }
 
+#[derive(Debug, Clone, Default)]
+pub struct EntityPatch {
+    pub scope: Option<Scope>,
+    pub description: Option<String>,
+    pub tags: Option<Vec<String>>,
+}
+
 /// frontmatter for _entity.md
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EntityFrontmatter {

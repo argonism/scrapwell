@@ -3,7 +3,7 @@ use chrono::Utc;
 use crate::{
     error::{Result, ScrapwellError},
     index::SearchIndex,
-    model::{EntityMeta, MemoryEntry, MemoryId, Scope, SearchHit, SearchQuery, TreeNode},
+    model::{EntityMeta, EntityPatch, MemoryEntry, MemoryId, MemoryPatch, Scope, SearchHit, SearchQuery, TreeNode},
     store::MemoryStore,
 };
 
@@ -28,6 +28,20 @@ impl<S: MemoryStore, I: SearchIndex> MemoryService<S, I> {
         description: Option<String>,
         tags: Vec<String>,
     ) -> Result<MemoryId> {
+        // 類似名チェック
+        let existing = self.store.list_entity_names()?;
+        let similar: Vec<String> = existing
+            .iter()
+            .filter(|n| strsim::jaro_winkler(n.as_str(), name.as_str()) > 0.85)
+            .cloned()
+            .collect();
+        if !similar.is_empty() {
+            return Err(ScrapwellError::SimilarEntityExists {
+                name: name.clone(),
+                suggestions: similar,
+            });
+        }
+
         let now = Utc::now();
         let entity = EntityMeta {
             id: MemoryId::new(),
@@ -40,6 +54,21 @@ impl<S: MemoryStore, I: SearchIndex> MemoryService<S, I> {
         };
         self.store.save_entity(&entity)?;
         Ok(entity.id)
+    }
+
+    pub fn update_entity(
+        &self,
+        id: String,
+        scope: Option<Scope>,
+        description: Option<String>,
+        tags: Option<Vec<String>>,
+    ) -> Result<()> {
+        let patch = EntityPatch { scope, description, tags };
+        self.store.update_entity(&MemoryId(id), &patch)
+    }
+
+    pub fn delete_entity(&self, id: String) -> Result<()> {
+        self.store.delete_entity(&MemoryId(id))
     }
 
     pub fn save_memory(
@@ -80,6 +109,30 @@ impl<S: MemoryStore, I: SearchIndex> MemoryService<S, I> {
         Ok(entry.id)
     }
 
+    pub fn update_memory(
+        &self,
+        id: String,
+        title: Option<String>,
+        content: Option<String>,
+        tags: Option<Vec<String>>,
+    ) -> Result<()> {
+        let memory_id = MemoryId(id);
+        let patch = MemoryPatch { title, content, tags };
+        self.store.update(&memory_id, &patch)?;
+        // 更新後のエントリで検索インデックスを再構築（Phase 3 で Tantivy に差し替え）
+        if let Some(entry) = self.store.get(&memory_id)? {
+            self.index.upsert(&entry)?;
+        }
+        Ok(())
+    }
+
+    pub fn delete_memory(&self, id: String) -> Result<()> {
+        let memory_id = MemoryId(id);
+        self.index.remove(&memory_id)?;
+        self.store.delete(&memory_id)?;
+        Ok(())
+    }
+
     pub fn get_memory(&self, id: &MemoryId) -> Result<Option<MemoryEntry>> {
         self.store.get(id)
     }
@@ -117,7 +170,7 @@ mod tests {
         (service, dir)
     }
 
-    // ---------- ハッピーパス ----------
+    // ---------- Phase 1: ハッピーパス ----------
 
     #[test]
     fn create_entity_save_memory_and_get_roundtrip() {
@@ -158,7 +211,7 @@ mod tests {
         assert!(result.is_none());
     }
 
-    // ---------- エラーケース ----------
+    // ---------- Phase 1: エラーケース ----------
 
     #[test]
     fn save_memory_without_entity_fails() {
@@ -208,7 +261,7 @@ mod tests {
         assert!(matches!(err, ScrapwellError::DuplicateName(_)));
     }
 
-    // ---------- vault 全体の一意性 ----------
+    // ---------- Phase 1: vault 全体の一意性 ----------
 
     #[test]
     fn vault_wide_name_uniqueness_across_entities() {
@@ -219,7 +272,6 @@ mod tests {
         svc.create_entity("beta".to_string(), Scope::Knowledge, None, vec![])
             .unwrap();
 
-        // alpha に "shared-name" を保存
         svc.save_memory(
             "alpha".to_string(),
             "shared-name".to_string(),
@@ -230,7 +282,6 @@ mod tests {
         )
         .unwrap();
 
-        // beta に同じ "shared-name" → vault 全体で一意なので弾かれる
         let err = svc
             .save_memory(
                 "beta".to_string(),
@@ -248,7 +299,7 @@ mod tests {
         );
     }
 
-    // ---------- list_memories ----------
+    // ---------- Phase 1: list_memories ----------
 
     #[test]
     fn list_memories_reflects_structure() {
@@ -274,5 +325,155 @@ mod tests {
         assert_eq!(es.document_count, 1);
         assert_eq!(es.children.len(), 1);
         assert_eq!(es.children[0].name, "mapping");
+    }
+
+    // ---------- Phase 2: 類似名チェック ----------
+
+    #[test]
+    fn similar_entity_name_is_rejected() {
+        let (svc, _dir) = make_service();
+
+        svc.create_entity("elasticsearch".to_string(), Scope::Knowledge, None, vec![])
+            .unwrap();
+
+        // "elastic-search" は "elasticsearch" と類似度 > 0.85 のためエラー
+        let err = svc
+            .create_entity("elastic-search".to_string(), Scope::Knowledge, None, vec![])
+            .unwrap_err();
+
+        match err {
+            ScrapwellError::SimilarEntityExists { name, suggestions } => {
+                assert_eq!(name, "elastic-search");
+                assert!(suggestions.contains(&"elasticsearch".to_string()));
+            }
+            other => panic!("expected SimilarEntityExists, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn distinct_entity_names_are_accepted() {
+        let (svc, _dir) = make_service();
+
+        svc.create_entity("rust".to_string(), Scope::Knowledge, None, vec![])
+            .unwrap();
+
+        // "redis" は "rust" と類似度 < 0.85 のため通過
+        svc.create_entity("redis".to_string(), Scope::Knowledge, None, vec![])
+            .unwrap();
+    }
+
+    // ---------- Phase 2: update_entity ----------
+
+    #[test]
+    fn update_entity_persists_changes() {
+        let (svc, _dir) = make_service();
+
+        svc.create_entity(
+            "elasticsearch".to_string(),
+            Scope::Knowledge,
+            Some("old description".to_string()),
+            vec!["old-tag".to_string()],
+        )
+        .unwrap();
+
+        // entity_id を取得
+        let entity = svc.store.get_entity_by_name("elasticsearch").unwrap().unwrap();
+
+        svc.update_entity(
+            entity.id.0.clone(),
+            Some(Scope::Project),
+            Some("new description".to_string()),
+            Some(vec!["new-tag".to_string()]),
+        )
+        .unwrap();
+
+        let updated = svc.store.get_entity_by_name("elasticsearch").unwrap().unwrap();
+        assert_eq!(updated.scope, Scope::Project);
+        assert_eq!(updated.description, Some("new description".to_string()));
+        assert_eq!(updated.tags, vec!["new-tag".to_string()]);
+    }
+
+    // ---------- Phase 2: delete_entity ----------
+
+    #[test]
+    fn delete_entity_cascades_to_documents() {
+        let (svc, _dir) = make_service();
+
+        svc.create_entity("rust".to_string(), Scope::Knowledge, None, vec![])
+            .unwrap();
+        let doc_id = svc
+            .save_memory(
+                "rust".to_string(),
+                "anyhow".to_string(),
+                "Anyhow".to_string(),
+                "Content".to_string(),
+                None,
+                vec![],
+            )
+            .unwrap();
+
+        let entity = svc.store.get_entity_by_name("rust").unwrap().unwrap();
+        svc.delete_entity(entity.id.0.clone()).unwrap();
+
+        // Entity も document も消えている
+        assert!(svc.store.get_entity_by_name("rust").unwrap().is_none());
+        assert!(svc.get_memory(&doc_id).unwrap().is_none());
+    }
+
+    // ---------- Phase 2: update_memory ----------
+
+    #[test]
+    fn update_memory_persists_changes() {
+        let (svc, _dir) = make_service();
+
+        svc.create_entity("rust".to_string(), Scope::Knowledge, None, vec![])
+            .unwrap();
+        let id = svc
+            .save_memory(
+                "rust".to_string(),
+                "anyhow".to_string(),
+                "Old Title".to_string(),
+                "Old content".to_string(),
+                None,
+                vec![],
+            )
+            .unwrap();
+
+        svc.update_memory(
+            id.0.clone(),
+            Some("New Title".to_string()),
+            Some("New content".to_string()),
+            Some(vec!["updated".to_string()]),
+        )
+        .unwrap();
+
+        let updated = svc.get_memory(&id).unwrap().unwrap();
+        assert_eq!(updated.title, "New Title");
+        assert_eq!(updated.content, "New content");
+        assert_eq!(updated.tags, vec!["updated".to_string()]);
+    }
+
+    // ---------- Phase 2: delete_memory ----------
+
+    #[test]
+    fn delete_memory_removes_document() {
+        let (svc, _dir) = make_service();
+
+        svc.create_entity("rust".to_string(), Scope::Knowledge, None, vec![])
+            .unwrap();
+        let id = svc
+            .save_memory(
+                "rust".to_string(),
+                "anyhow".to_string(),
+                "Anyhow".to_string(),
+                "Content".to_string(),
+                None,
+                vec![],
+            )
+            .unwrap();
+
+        svc.delete_memory(id.0.clone()).unwrap();
+
+        assert!(svc.get_memory(&id).unwrap().is_none());
     }
 }
