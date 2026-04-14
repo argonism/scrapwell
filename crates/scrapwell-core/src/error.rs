@@ -23,6 +23,9 @@ pub enum ScrapwellError {
 
     #[error("database error: {0}")]
     Database(#[from] rusqlite::Error),
+
+    #[error("search index error: {0}")]
+    SearchIndex(String),
 }
 
 pub type Result<T> = std::result::Result<T, ScrapwellError>;

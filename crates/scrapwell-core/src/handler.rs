@@ -60,6 +60,18 @@ struct ListMemoriesParams {
     depth: Option<u32>,
 }
 
+// ---------- Phase 3 パラメータ型 ----------
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+struct SearchMemoryParams {
+    /// 検索キーワード。title・content・tags を横断して検索する。
+    query: String,
+    /// 特定 Entity に絞り込む場合は Entity 名を指定（任意）
+    entity: Option<String>,
+    /// 最大取得件数（デフォルト: 10）
+    limit: Option<usize>,
+}
+
 // ---------- Phase 2 パラメータ型 ----------
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
@@ -269,6 +281,21 @@ where
         self.service
             .update_memory(p.id, p.title, p.content, p.tags)
             .map(|_| serde_json::json!({ "ok": true }).to_string())
+            .map_err(|e| e.to_string())
+    }
+
+    #[tool(description = "キーワードで全文検索する。\n\
+        title・content・tags を横断して検索し、スニペット（<<ハイライト>> 形式）付きで結果を返す。\n\
+        entity を指定すると特定の Entity 内に絞り込める。\n\
+        検索結果の id を使って get_memory で全内容を取得できる。\n\
+        検索結果が 0 件の場合は空配列を返す。")]
+    fn search_memory(
+        &self,
+        Parameters(p): Parameters<SearchMemoryParams>,
+    ) -> Result<String, String> {
+        self.service
+            .search_memory(p.query, p.entity, p.limit.unwrap_or(10))
+            .map(|hits| serde_json::to_string(&hits).unwrap_or_default())
             .map_err(|e| e.to_string())
     }
 

@@ -1,4 +1,6 @@
 pub mod noop;
+#[cfg(feature = "tantivy-backend")]
+pub mod tantivy_index;
 
 use crate::{
     error::Result,

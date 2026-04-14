@@ -3,7 +3,7 @@ use std::sync::Arc;
 use rmcp::{ServiceExt, transport::stdio};
 use scrapwell_core::{
     ScrapwellHandler,
-    index::noop::NoopSearchIndex,
+    index::tantivy_index::TantivySearchIndex,
     service::MemoryService,
     store::fs::FsMemoryStore,
 };
@@ -14,8 +14,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .expect("cannot determine home directory")
         .join(".memory");
 
-    let store = FsMemoryStore::new(root)?;
-    let index = NoopSearchIndex;
+    let store = FsMemoryStore::new(root.clone())?;
+    let index = TantivySearchIndex::new(root.join("index"))?;
     let service = Arc::new(MemoryService::new(store, index));
     let handler = ScrapwellHandler::new(service);
 
