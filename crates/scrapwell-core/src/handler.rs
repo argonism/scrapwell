@@ -1,10 +1,9 @@
 use std::sync::Arc;
 
 use rmcp::{
-    ServerHandler,
     handler::server::{router::tool::ToolRouter, wrapper::Parameters},
     model::{Implementation, ServerCapabilities},
-    schemars, tool, tool_handler, tool_router,
+    schemars, tool, tool_handler, tool_router, ServerHandler,
 };
 use serde::Deserialize;
 
@@ -120,8 +119,7 @@ fn format_tree(node: &crate::model::TreeNode, is_root: bool) -> String {
         node.children
             .iter()
             .map(|e| {
-                let mut lines =
-                    vec![format!("{}/  ({} documents)", e.name, e.document_count)];
+                let mut lines = vec![format!("{}/  ({} documents)", e.name, e.document_count)];
                 for t in &e.children {
                     lines.push(format!("  {}/  ({} documents)", t.name, t.document_count));
                 }
@@ -130,8 +128,10 @@ fn format_tree(node: &crate::model::TreeNode, is_root: bool) -> String {
             .collect::<Vec<_>>()
             .join("\n")
     } else {
-        let mut lines =
-            vec![format!("{}/  ({} documents)", node.name, node.document_count)];
+        let mut lines = vec![format!(
+            "{}/  ({} documents)",
+            node.name, node.document_count
+        )];
         for t in &node.children {
             lines.push(format!("  {}/  ({} documents)", t.name, t.document_count));
         }
@@ -200,21 +200,27 @@ where
                 ))
             }
         };
-        match self.service.create_entity(p.name, scope, p.description, p.tags.unwrap_or_default()) {
+        match self
+            .service
+            .create_entity(p.name, scope, p.description, p.tags.unwrap_or_default())
+        {
             Ok(id) => Ok(serde_json::json!({ "id": id.0 }).to_string()),
             Err(crate::error::ScrapwellError::SimilarEntityExists { name, suggestions }) => {
                 Err(serde_json::json!({
                     "error": "similar_entity_exists",
                     "message": format!("Entity '{}' is similar to existing entities", name),
                     "suggestions": suggestions,
-                }).to_string())
+                })
+                .to_string())
             }
             Err(e) => Err(e.to_string()),
         }
     }
 
-    #[tool(description = "既存 Entity の部分更新。指定したフィールドのみ変更される。\n\
-        scope・description・tags のうち指定したものだけ更新する。")]
+    #[tool(
+        description = "既存 Entity の部分更新。指定したフィールドのみ変更される。\n\
+        scope・description・tags のうち指定したものだけ更新する。"
+    )]
     fn update_entity(
         &self,
         Parameters(p): Parameters<UpdateEntityParams>,
@@ -235,8 +241,10 @@ where
             .map_err(|e| e.to_string())
     }
 
-    #[tool(description = "Entity を削除する。配下のドキュメント・Topic ディレクトリもカスケード削除される。\n\
-        この操作は取り消せない。")]
+    #[tool(
+        description = "Entity を削除する。配下のドキュメント・Topic ディレクトリもカスケード削除される。\n\
+        この操作は取り消せない。"
+    )]
     fn delete_entity(
         &self,
         Parameters(p): Parameters<DeleteEntityParams>,
@@ -258,10 +266,7 @@ where
         name は vault 全体で一意でなければならない。重複時はエラーになるので suffix を付けてリトライすること。\n\
         【tags】\n\
         パス情報（entity 名・topic 名）は tags に重複させないこと。横断的な関心事のみ記載する。")]
-    fn save_memory(
-        &self,
-        Parameters(p): Parameters<SaveMemoryParams>,
-    ) -> Result<String, String> {
+    fn save_memory(&self, Parameters(p): Parameters<SaveMemoryParams>) -> Result<String, String> {
         self.service
             .save_memory(
                 p.entity,
@@ -275,8 +280,10 @@ where
             .map_err(|e| e.to_string())
     }
 
-    #[tool(description = "既存ドキュメントの部分更新。指定したフィールドのみ変更される。\n\
-        title・content・tags のうち指定したものだけ更新する。")]
+    #[tool(
+        description = "既存ドキュメントの部分更新。指定したフィールドのみ変更される。\n\
+        title・content・tags のうち指定したものだけ更新する。"
+    )]
     fn update_memory(
         &self,
         Parameters(p): Parameters<UpdateMemoryParams>,
@@ -316,8 +323,10 @@ where
             .map_err(|e| e.to_string())
     }
 
-    #[tool(description = "ドキュメントを削除する。Markdown ファイルとインデックスエントリを除去する。\n\
-        この操作は取り消せない。")]
+    #[tool(
+        description = "ドキュメントを削除する。Markdown ファイルとインデックスエントリを除去する。\n\
+        この操作は取り消せない。"
+    )]
     fn delete_memory(
         &self,
         Parameters(p): Parameters<DeleteMemoryParams>,
@@ -330,10 +339,7 @@ where
 
     #[tool(description = "ドキュメントの全内容を ID で取得する。\n\
         ID は save_memory の返却値、または list_memories（未実装）で得た ULID 文字列。")]
-    fn get_memory(
-        &self,
-        Parameters(p): Parameters<GetMemoryParams>,
-    ) -> Result<String, String> {
+    fn get_memory(&self, Parameters(p): Parameters<GetMemoryParams>) -> Result<String, String> {
         let id = MemoryId(p.id);
         match self.service.get_memory(&id) {
             Ok(Some(entry)) => serde_json::to_string(&entry).map_err(|e| e.to_string()),
@@ -378,17 +384,13 @@ mod tests {
 
     use anyhow::Result;
     use rmcp::{
-        ClientHandler, ServiceExt,
         model::{CallToolRequestParams, CallToolResult, ClientInfo},
+        ClientHandler, ServiceExt,
     };
     use tempfile::TempDir;
 
-    use crate::{
-        index::noop::NoopSearchIndex,
-        service::MemoryService,
-        store::fs::FsMemoryStore,
-    };
     use super::ScrapwellHandler;
+    use crate::{index::noop::NoopSearchIndex, service::MemoryService, store::fs::FsMemoryStore};
 
     // ---------- テスト用クライアント ----------
 
@@ -491,8 +493,11 @@ mod tests {
         let dir = TempDir::new()?;
         let client = start!(dir);
 
-        tool!(client, "create_entity",
-            serde_json::json!({"name": "rust", "scope": "knowledge"}));
+        tool!(
+            client,
+            "create_entity",
+            serde_json::json!({"name": "rust", "scope": "knowledge"})
+        );
 
         let result = tool!(
             client,
@@ -543,8 +548,11 @@ mod tests {
         let dir = TempDir::new()?;
         let client = start!(dir);
 
-        tool!(client, "create_entity",
-            serde_json::json!({"name": "rust", "scope": "knowledge"}));
+        tool!(
+            client,
+            "create_entity",
+            serde_json::json!({"name": "rust", "scope": "knowledge"})
+        );
 
         let save_result = tool!(
             client,
@@ -567,7 +575,10 @@ mod tests {
         assert_eq!(entry["name"], "tokio-guide");
         assert_eq!(entry["title"], "Tokio Guide");
         assert_eq!(entry["topic"], "async");
-        assert!(entry["content"].as_str().unwrap().contains("非同期ランタイム"));
+        assert!(entry["content"]
+            .as_str()
+            .unwrap()
+            .contains("非同期ランタイム"));
 
         client.cancel().await?;
         Ok(())
@@ -578,7 +589,11 @@ mod tests {
         let dir = TempDir::new()?;
         let client = start!(dir);
 
-        let result = tool!(client, "get_memory", serde_json::json!({"id": "DOESNOTEXIST"}));
+        let result = tool!(
+            client,
+            "get_memory",
+            serde_json::json!({"id": "DOESNOTEXIST"})
+        );
 
         assert_eq!(result.is_error, Some(true));
         assert!(text_of(&result).contains("not found"));
@@ -597,7 +612,11 @@ mod tests {
         let result = tool!(client, "list_memories", serde_json::json!({}));
 
         assert_ne!(result.is_error, Some(true));
-        assert_eq!(text_of(&result), "", "empty vault should return empty string");
+        assert_eq!(
+            text_of(&result),
+            "",
+            "empty vault should return empty string"
+        );
 
         client.cancel().await?;
         Ok(())
@@ -608,21 +627,32 @@ mod tests {
         let dir = TempDir::new()?;
         let client = start!(dir);
 
-        tool!(client, "create_entity",
-            serde_json::json!({"name": "elasticsearch", "scope": "knowledge"}));
-        tool!(client, "save_memory", serde_json::json!({
-            "entity": "elasticsearch",
-            "name": "nested-vector",
-            "title": "Nested Vector",
-            "content": "...",
-            "topic": "mapping"
-        }));
-        tool!(client, "save_memory", serde_json::json!({
-            "entity": "elasticsearch",
-            "name": "shard-sizing",
-            "title": "Shard Sizing",
-            "content": "..."
-        }));
+        tool!(
+            client,
+            "create_entity",
+            serde_json::json!({"name": "elasticsearch", "scope": "knowledge"})
+        );
+        tool!(
+            client,
+            "save_memory",
+            serde_json::json!({
+                "entity": "elasticsearch",
+                "name": "nested-vector",
+                "title": "Nested Vector",
+                "content": "...",
+                "topic": "mapping"
+            })
+        );
+        tool!(
+            client,
+            "save_memory",
+            serde_json::json!({
+                "entity": "elasticsearch",
+                "name": "shard-sizing",
+                "title": "Shard Sizing",
+                "content": "..."
+            })
+        );
 
         let result = tool!(client, "list_memories", serde_json::json!({}));
 
@@ -644,14 +674,16 @@ mod tests {
         let client = start!(dir);
 
         let create_result = tool!(
-            client, "create_entity",
+            client,
+            "create_entity",
             serde_json::json!({"name": "rust", "scope": "knowledge", "description": "old"})
         );
         let entity: serde_json::Value = serde_json::from_str(&text_of(&create_result))?;
         let id = entity["id"].as_str().unwrap();
 
         let update_result = tool!(
-            client, "update_entity",
+            client,
+            "update_entity",
             serde_json::json!({"id": id, "scope": "project", "description": "new description"})
         );
         assert_ne!(update_result.is_error, Some(true));
@@ -673,16 +705,14 @@ mod tests {
         let client = start!(dir);
 
         let create_result = tool!(
-            client, "create_entity",
+            client,
+            "create_entity",
             serde_json::json!({"name": "rust", "scope": "knowledge"})
         );
         let entity: serde_json::Value = serde_json::from_str(&text_of(&create_result))?;
         let id = entity["id"].as_str().unwrap();
 
-        let delete_result = tool!(
-            client, "delete_entity",
-            serde_json::json!({"id": id})
-        );
+        let delete_result = tool!(client, "delete_entity", serde_json::json!({"id": id}));
         assert_ne!(delete_result.is_error, Some(true));
 
         // list_memories で消えていることを確認
@@ -700,18 +730,29 @@ mod tests {
         let dir = TempDir::new()?;
         let client = start!(dir);
 
-        tool!(client, "create_entity",
-            serde_json::json!({"name": "rust", "scope": "knowledge"}));
+        tool!(
+            client,
+            "create_entity",
+            serde_json::json!({"name": "rust", "scope": "knowledge"})
+        );
 
-        let save_result = tool!(client, "save_memory", serde_json::json!({
-            "entity": "rust", "name": "anyhow", "title": "Old Title", "content": "Old content"
-        }));
+        let save_result = tool!(
+            client,
+            "save_memory",
+            serde_json::json!({
+                "entity": "rust", "name": "anyhow", "title": "Old Title", "content": "Old content"
+            })
+        );
         let saved: serde_json::Value = serde_json::from_str(&text_of(&save_result))?;
         let id = saved["id"].as_str().unwrap().to_string();
 
-        let update_result = tool!(client, "update_memory", serde_json::json!({
-            "id": id, "title": "New Title", "content": "New content"
-        }));
+        let update_result = tool!(
+            client,
+            "update_memory",
+            serde_json::json!({
+                "id": id, "title": "New Title", "content": "New content"
+            })
+        );
         assert_ne!(update_result.is_error, Some(true));
 
         // get_memory で更新内容を確認
@@ -731,12 +772,19 @@ mod tests {
         let dir = TempDir::new()?;
         let client = start!(dir);
 
-        tool!(client, "create_entity",
-            serde_json::json!({"name": "rust", "scope": "knowledge"}));
+        tool!(
+            client,
+            "create_entity",
+            serde_json::json!({"name": "rust", "scope": "knowledge"})
+        );
 
-        let save_result = tool!(client, "save_memory", serde_json::json!({
-            "entity": "rust", "name": "anyhow", "title": "Anyhow", "content": "Content"
-        }));
+        let save_result = tool!(
+            client,
+            "save_memory",
+            serde_json::json!({
+                "entity": "rust", "name": "anyhow", "title": "Anyhow", "content": "Content"
+            })
+        );
         let saved: serde_json::Value = serde_json::from_str(&text_of(&save_result))?;
         let id = saved["id"].as_str().unwrap().to_string();
 
@@ -744,7 +792,11 @@ mod tests {
         assert_ne!(delete_result.is_error, Some(true));
 
         let get_result = tool!(client, "get_memory", serde_json::json!({"id": id}));
-        assert_eq!(get_result.is_error, Some(true), "should return error after deletion");
+        assert_eq!(
+            get_result.is_error,
+            Some(true),
+            "should return error after deletion"
+        );
 
         client.cancel().await?;
         Ok(())
@@ -757,16 +809,25 @@ mod tests {
         let dir = TempDir::new()?;
         let client = start!(dir);
 
-        tool!(client, "create_entity",
-            serde_json::json!({"name": "elasticsearch", "scope": "knowledge"}));
+        tool!(
+            client,
+            "create_entity",
+            serde_json::json!({"name": "elasticsearch", "scope": "knowledge"})
+        );
 
-        let result = tool!(client, "create_entity",
-            serde_json::json!({"name": "elastic-search", "scope": "knowledge"}));
+        let result = tool!(
+            client,
+            "create_entity",
+            serde_json::json!({"name": "elastic-search", "scope": "knowledge"})
+        );
 
         assert_eq!(result.is_error, Some(true));
         let json: serde_json::Value = serde_json::from_str(&text_of(&result))?;
         assert_eq!(json["error"], "similar_entity_exists");
-        assert!(json["suggestions"].as_array().unwrap().contains(&serde_json::json!("elasticsearch")));
+        assert!(json["suggestions"]
+            .as_array()
+            .unwrap()
+            .contains(&serde_json::json!("elasticsearch")));
 
         client.cancel().await?;
         Ok(())

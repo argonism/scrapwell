@@ -1,8 +1,8 @@
+use super::SearchIndex;
 use crate::{
     error::Result,
     model::{MemoryEntry, MemoryId, SearchHit, SearchQuery},
 };
-use super::SearchIndex;
 
 pub struct NoopSearchIndex;
 

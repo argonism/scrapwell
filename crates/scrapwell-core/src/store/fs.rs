@@ -1,13 +1,10 @@
-use std::{
-    collections::BTreeMap,
-    path::PathBuf,
-    sync::Mutex,
-};
+use std::{collections::BTreeMap, path::PathBuf, sync::Mutex};
 
 use chrono::{DateTime, Utc};
-use rusqlite::{Connection, params};
+use rusqlite::{params, Connection};
 use serde::de::DeserializeOwned;
 
+use super::MemoryStore;
 use crate::{
     error::{Result, ScrapwellError},
     model::{
@@ -16,7 +13,6 @@ use crate::{
     },
     path::MemoryPath,
 };
-use super::MemoryStore;
 
 pub struct FsMemoryStore {
     root: PathBuf,
@@ -77,7 +73,10 @@ fn str_to_scope(s: &str) -> Result<Scope> {
     match s {
         "knowledge" => Ok(Scope::Knowledge),
         "project" => Ok(Scope::Project),
-        other => Err(ScrapwellError::InvalidPath(format!("unknown scope: {}", other))),
+        other => Err(ScrapwellError::InvalidPath(format!(
+            "unknown scope: {}",
+            other
+        ))),
     }
 }
 
@@ -436,12 +435,10 @@ impl MemoryStore for FsMemoryStore {
         };
 
         // 2. パッチを適用
-        let new_scope = patch.scope.unwrap_or_else(|| str_to_scope(&current_scope_str).unwrap());
-        let new_description = patch
-            .description
-            .as_ref()
-            .map(|s| s.clone())
-            .or(current_description);
+        let new_scope = patch
+            .scope
+            .unwrap_or_else(|| str_to_scope(&current_scope_str).unwrap());
+        let new_description = patch.description.clone().or(current_description);
         let new_tags = patch
             .tags
             .as_ref()
@@ -566,12 +563,7 @@ impl MemoryStore for FsMemoryStore {
             let conn = self.conn.lock().unwrap();
             conn.execute(
                 "UPDATE documents SET title=?1, tags=?2, updated_at=?3 WHERE id=?4",
-                params![
-                    new_title,
-                    tags_to_json(&new_tags)?,
-                    now.to_rfc3339(),
-                    id.0,
-                ],
+                params![new_title, tags_to_json(&new_tags)?, now.to_rfc3339(), id.0,],
             )?;
         }
 
@@ -620,7 +612,16 @@ impl MemoryStore for FsMemoryStore {
     fn iter_all(&self) -> Result<Vec<MemoryEntry>> {
         // 関数スコープで conn/stmt を宣言し、collect 後に明示的に drop してから
         // ファイル読み込みを行う（ネストブロック内の ? は一時値の借用問題を引き起こすため回避）
-        type Row = (String, String, Option<String>, String, String, String, String, String);
+        type Row = (
+            String,
+            String,
+            Option<String>,
+            String,
+            String,
+            String,
+            String,
+            String,
+        );
 
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare(
@@ -792,8 +793,14 @@ mod tests {
         assert!(entity_md.exists(), "_entity.md should exist");
 
         let content = std::fs::read_to_string(&entity_md).unwrap();
-        assert!(content.contains("scope: knowledge"), "frontmatter should have scope");
-        assert!(content.contains("About elasticsearch"), "body should have description");
+        assert!(
+            content.contains("scope: knowledge"),
+            "frontmatter should have scope"
+        );
+        assert!(
+            content.contains("About elasticsearch"),
+            "body should have description"
+        );
     }
 
     #[test]
@@ -820,7 +827,10 @@ mod tests {
         assert!(doc_path.exists(), "document file should exist");
 
         let content = std::fs::read_to_string(&doc_path).unwrap();
-        assert!(content.contains("Nested + Dense Vector"), "title should be in frontmatter");
+        assert!(
+            content.contains("Nested + Dense Vector"),
+            "title should be in frontmatter"
+        );
         assert!(
             content.contains("Elasticsearch でのネスト構造の説明"),
             "body should be present"
@@ -836,14 +846,22 @@ mod tests {
         store.save_entity(&sample_entity("elasticsearch")).unwrap();
 
         store.save(&sample_entry("rust", "anyhow", None)).unwrap();
-        store.save(&sample_entry("rust", "thiserror", None)).unwrap();
-        store.save(&sample_entry("elasticsearch", "shards", None)).unwrap();
+        store
+            .save(&sample_entry("rust", "thiserror", None))
+            .unwrap();
+        store
+            .save(&sample_entry("elasticsearch", "shards", None))
+            .unwrap();
 
         let tree = store.list_tree(None, 2).unwrap();
 
         assert_eq!(tree.children.len(), 2);
         let rust = tree.children.iter().find(|n| n.name == "rust").unwrap();
-        let es = tree.children.iter().find(|n| n.name == "elasticsearch").unwrap();
+        let es = tree
+            .children
+            .iter()
+            .find(|n| n.name == "elasticsearch")
+            .unwrap();
         assert_eq!(rust.document_count, 2);
         assert_eq!(es.document_count, 1);
     }
@@ -853,15 +871,33 @@ mod tests {
         let (store, _dir) = make_store();
         store.save_entity(&sample_entity("elasticsearch")).unwrap();
 
-        store.save(&sample_entry("elasticsearch", "nested-vector", Some("mapping"))).unwrap();
-        store.save(&sample_entry("elasticsearch", "dynamic-templates", Some("mapping"))).unwrap();
-        store.save(&sample_entry("elasticsearch", "reindex-strategy", None)).unwrap();
+        store
+            .save(&sample_entry(
+                "elasticsearch",
+                "nested-vector",
+                Some("mapping"),
+            ))
+            .unwrap();
+        store
+            .save(&sample_entry(
+                "elasticsearch",
+                "dynamic-templates",
+                Some("mapping"),
+            ))
+            .unwrap();
+        store
+            .save(&sample_entry("elasticsearch", "reindex-strategy", None))
+            .unwrap();
 
         let tree = store.list_tree(Some("elasticsearch"), 2).unwrap();
 
         assert_eq!(tree.name, "elasticsearch");
         assert_eq!(tree.document_count, 3);
-        assert_eq!(tree.children.len(), 1, "topic 'mapping' should appear as child");
+        assert_eq!(
+            tree.children.len(),
+            1,
+            "topic 'mapping' should appear as child"
+        );
         assert_eq!(tree.children[0].name, "mapping");
         assert_eq!(tree.children[0].document_count, 2);
     }
@@ -872,7 +908,9 @@ mod tests {
         store.save_entity(&sample_entity("rust")).unwrap();
         store.save_entity(&sample_entity("elasticsearch")).unwrap();
         store.save(&sample_entry("rust", "anyhow", None)).unwrap();
-        store.save(&sample_entry("elasticsearch", "shards", None)).unwrap();
+        store
+            .save(&sample_entry("elasticsearch", "shards", None))
+            .unwrap();
 
         let tree = store.list_tree(Some("rust"), 2).unwrap();
 
@@ -885,7 +923,13 @@ mod tests {
     fn list_tree_depth_1_hides_topics() {
         let (store, _dir) = make_store();
         store.save_entity(&sample_entity("elasticsearch")).unwrap();
-        store.save(&sample_entry("elasticsearch", "nested-vector", Some("mapping"))).unwrap();
+        store
+            .save(&sample_entry(
+                "elasticsearch",
+                "nested-vector",
+                Some("mapping"),
+            ))
+            .unwrap();
 
         let tree = store.list_tree(Some("elasticsearch"), 1).unwrap();
 
@@ -933,7 +977,9 @@ mod tests {
         let (store, _dir) = make_store();
         store.save_entity(&sample_entity("rust")).unwrap();
         store.save(&sample_entry("rust", "anyhow", None)).unwrap();
-        let err = store.save(&sample_entry("rust", "anyhow", None)).unwrap_err();
+        let err = store
+            .save(&sample_entry("rust", "anyhow", None))
+            .unwrap_err();
         assert!(matches!(err, ScrapwellError::DuplicateName(_)));
     }
 
@@ -1019,9 +1065,7 @@ mod tests {
         assert_eq!(updated.tags, vec!["new-tag".to_string()]);
 
         // _entity.md にも反映されているか確認
-        let content = std::fs::read_to_string(
-            dir.path().join("entities/rust/_entity.md")
-        ).unwrap();
+        let content = std::fs::read_to_string(dir.path().join("entities/rust/_entity.md")).unwrap();
         assert!(content.contains("scope: project"));
         assert!(content.contains("updated description"));
     }
@@ -1110,15 +1154,27 @@ mod tests {
         store.save_entity(&sample_entity("elasticsearch")).unwrap();
 
         store.save(&sample_entry("rust", "anyhow", None)).unwrap();
-        store.save(&sample_entry("rust", "thiserror", None)).unwrap();
-        store.save(&sample_entry("elasticsearch", "nested-vector", Some("mapping"))).unwrap();
+        store
+            .save(&sample_entry("rust", "thiserror", None))
+            .unwrap();
+        store
+            .save(&sample_entry(
+                "elasticsearch",
+                "nested-vector",
+                Some("mapping"),
+            ))
+            .unwrap();
 
         let entries = store.iter_all().unwrap();
         assert_eq!(entries.len(), 3);
 
         // コンテンツが読み込まれている
         for entry in &entries {
-            assert!(!entry.content.is_empty(), "content should be loaded for {}", entry.name);
+            assert!(
+                !entry.content.is_empty(),
+                "content should be loaded for {}",
+                entry.name
+            );
         }
     }
 

@@ -1,12 +1,12 @@
 use std::{path::PathBuf, sync::Mutex};
 
 use tantivy::{
-    Index, IndexReader, IndexWriter, ReloadPolicy, TantivyDocument, Term,
     collector::TopDocs,
     directory::MmapDirectory,
     query::{BooleanQuery, Occur, QueryParser, TermQuery},
     schema::{IndexRecordOption, Schema, Value, STORED, STRING, TEXT},
     snippet::SnippetGenerator,
+    Index, IndexReader, IndexWriter, ReloadPolicy, TantivyDocument, Term,
 };
 
 use crate::{
@@ -20,14 +20,14 @@ use crate::{
 fn build_schema() -> Schema {
     let mut b = Schema::builder();
     // STRING: トークン化なし（完全一致・削除キー）、STORED: 取得用
-    b.add_text_field("id",      STRING | STORED);
-    b.add_text_field("entity",  STRING | STORED);
-    b.add_text_field("topic",   STRING | STORED);
-    b.add_text_field("name",    STRING | STORED);
+    b.add_text_field("id", STRING | STORED);
+    b.add_text_field("entity", STRING | STORED);
+    b.add_text_field("topic", STRING | STORED);
+    b.add_text_field("name", STRING | STORED);
     // TEXT: 全文検索可能、STORED: snippet 生成・取得用
-    b.add_text_field("title",   TEXT | STORED);
+    b.add_text_field("title", TEXT | STORED);
     b.add_text_field("content", TEXT | STORED);
-    b.add_text_field("tags",    TEXT | STORED);
+    b.add_text_field("tags", TEXT | STORED);
     b.build()
 }
 
@@ -38,22 +38,21 @@ fn into_search_err(e: impl std::fmt::Display) -> ScrapwellError {
 }
 
 /// ドキュメントを writer に追加する（既存 ID は削除してから追加 = upsert）
-fn add_entry_doc(
-    schema: &Schema,
-    writer: &mut IndexWriter,
-    entry: &MemoryEntry,
-) -> Result<()> {
+fn add_entry_doc(schema: &Schema, writer: &mut IndexWriter, entry: &MemoryEntry) -> Result<()> {
     let id_field = schema.get_field("id").unwrap();
     writer.delete_term(Term::from_field_text(id_field, &entry.id.0));
 
     let mut doc = TantivyDocument::default();
     doc.add_text(id_field, &entry.id.0);
-    doc.add_text(schema.get_field("entity").unwrap(),  &entry.entity);
-    doc.add_text(schema.get_field("topic").unwrap(),   entry.topic.as_deref().unwrap_or(""));
-    doc.add_text(schema.get_field("name").unwrap(),    &entry.name);
-    doc.add_text(schema.get_field("title").unwrap(),   &entry.title);
+    doc.add_text(schema.get_field("entity").unwrap(), &entry.entity);
+    doc.add_text(
+        schema.get_field("topic").unwrap(),
+        entry.topic.as_deref().unwrap_or(""),
+    );
+    doc.add_text(schema.get_field("name").unwrap(), &entry.name);
+    doc.add_text(schema.get_field("title").unwrap(), &entry.title);
     doc.add_text(schema.get_field("content").unwrap(), &entry.content);
-    doc.add_text(schema.get_field("tags").unwrap(),    &entry.tags.join(" "));
+    doc.add_text(schema.get_field("tags").unwrap(), entry.tags.join(" "));
 
     writer.add_document(doc).map_err(into_search_err)?;
     Ok(())
@@ -127,21 +126,20 @@ impl SearchIndex for TantivySearchIndex {
 
     fn search(&self, query: &SearchQuery) -> Result<Vec<SearchHit>> {
         let searcher = self.reader.searcher();
-        let schema   = &self.schema;
+        let schema = &self.schema;
 
-        let title   = schema.get_field("title").unwrap();
+        let title = schema.get_field("title").unwrap();
         let content = schema.get_field("content").unwrap();
-        let tags    = schema.get_field("tags").unwrap();
+        let tags = schema.get_field("tags").unwrap();
 
         // title・content・tags を横断するキーワード検索クエリ
-        let parser   = QueryParser::for_index(&self.index, vec![title, content, tags]);
-        let kw_query = parser.parse_query(&query.query)
-            .map_err(|e| into_search_err(e))?;
+        let parser = QueryParser::for_index(&self.index, vec![title, content, tags]);
+        let kw_query = parser.parse_query(&query.query).map_err(into_search_err)?;
 
         // entity フィルタがある場合は BooleanQuery で AND 結合
         let final_query: Box<dyn tantivy::query::Query> = if let Some(entity) = &query.entity {
             let entity_field = schema.get_field("entity").unwrap();
-            let entity_term  = Term::from_field_text(entity_field, entity);
+            let entity_term = Term::from_field_text(entity_field, entity);
             let entity_query = TermQuery::new(entity_term, IndexRecordOption::Basic);
             Box::new(BooleanQuery::new(vec![
                 (Occur::Must, kw_query),
@@ -155,8 +153,8 @@ impl SearchIndex for TantivySearchIndex {
             .search(&*final_query, &TopDocs::with_limit(query.limit))
             .map_err(into_search_err)?;
 
-        let snippet_gen = SnippetGenerator::create(&searcher, &*final_query, content)
-            .map_err(into_search_err)?;
+        let snippet_gen =
+            SnippetGenerator::create(&searcher, &*final_query, content).map_err(into_search_err)?;
 
         let mut hits = Vec::new();
         for (score, doc_address) in top_docs {
@@ -174,7 +172,11 @@ impl SearchIndex for TantivySearchIndex {
             };
 
             let topic_str = get_str("topic");
-            let topic = if topic_str.is_empty() { None } else { Some(topic_str) };
+            let topic = if topic_str.is_empty() {
+                None
+            } else {
+                Some(topic_str)
+            };
 
             let tags_str = get_str("tags");
             let tags: Vec<String> = if tags_str.is_empty() {
@@ -183,15 +185,15 @@ impl SearchIndex for TantivySearchIndex {
                 tags_str.split_whitespace().map(str::to_string).collect()
             };
 
-            let snippet  = snippet_gen.snippet_from_doc(&doc);
+            let snippet = snippet_gen.snippet_from_doc(&doc);
             let snippets = format_snippet(&snippet);
 
             hits.push(SearchHit {
-                id:     MemoryId(get_str("id")),
+                id: MemoryId(get_str("id")),
                 entity: get_str("entity"),
                 topic,
-                name:   get_str("name"),
-                title:  get_str("title"),
+                name: get_str("name"),
+                title: get_str("title"),
                 tags,
                 snippets,
                 score,
@@ -234,7 +236,15 @@ mod tests {
     use chrono::Utc;
     use tempfile::TempDir;
 
-    fn make_entry(id: &str, entity: &str, topic: Option<&str>, name: &str, title: &str, content: &str, tags: Vec<&str>) -> MemoryEntry {
+    fn make_entry(
+        id: &str,
+        entity: &str,
+        topic: Option<&str>,
+        name: &str,
+        title: &str,
+        content: &str,
+        tags: Vec<&str>,
+    ) -> MemoryEntry {
         MemoryEntry {
             id: MemoryId(id.to_string()),
             entity: entity.to_string(),
@@ -269,11 +279,13 @@ mod tests {
         );
         idx.upsert(&entry).unwrap();
 
-        let hits = idx.search(&SearchQuery {
-            query: "error handling".to_string(),
-            entity: None,
-            limit: 10,
-        }).unwrap();
+        let hits = idx
+            .search(&SearchQuery {
+                query: "error handling".to_string(),
+                entity: None,
+                limit: 10,
+            })
+            .unwrap();
 
         assert_eq!(hits.len(), 1);
         assert_eq!(hits[0].id.0, "01HZZZZ00001");
@@ -289,11 +301,13 @@ mod tests {
         let entry = make_entry("01", "rust", None, "doc", "Title", "Rust content", vec![]);
         idx.upsert(&entry).unwrap();
 
-        let hits = idx.search(&SearchQuery {
-            query: "python".to_string(),
-            entity: None,
-            limit: 10,
-        }).unwrap();
+        let hits = idx
+            .search(&SearchQuery {
+                query: "python".to_string(),
+                entity: None,
+                limit: 10,
+            })
+            .unwrap();
 
         assert!(hits.is_empty());
     }
@@ -303,14 +317,34 @@ mod tests {
         let dir = TempDir::new().unwrap();
         let idx = make_index(&dir);
 
-        idx.upsert(&make_entry("01", "rust", None, "trait-guide", "Trait Guide", "Rust traits", vec![])).unwrap();
-        idx.upsert(&make_entry("02", "go", None, "interface-guide", "Interface Guide", "Go interfaces and traits", vec![])).unwrap();
+        idx.upsert(&make_entry(
+            "01",
+            "rust",
+            None,
+            "trait-guide",
+            "Trait Guide",
+            "Rust traits",
+            vec![],
+        ))
+        .unwrap();
+        idx.upsert(&make_entry(
+            "02",
+            "go",
+            None,
+            "interface-guide",
+            "Interface Guide",
+            "Go interfaces and traits",
+            vec![],
+        ))
+        .unwrap();
 
-        let hits = idx.search(&SearchQuery {
-            query: "traits".to_string(),
-            entity: Some("rust".to_string()),
-            limit: 10,
-        }).unwrap();
+        let hits = idx
+            .search(&SearchQuery {
+                query: "traits".to_string(),
+                entity: Some("rust".to_string()),
+                limit: 10,
+            })
+            .unwrap();
 
         assert_eq!(hits.len(), 1);
         assert_eq!(hits[0].entity, "rust");
@@ -321,20 +355,34 @@ mod tests {
         let dir = TempDir::new().unwrap();
         let idx = make_index(&dir);
 
-        let mut entry = make_entry("01", "rust", None, "doc", "Old Title", "old content here", vec![]);
+        let mut entry = make_entry(
+            "01",
+            "rust",
+            None,
+            "doc",
+            "Old Title",
+            "old content here",
+            vec![],
+        );
         idx.upsert(&entry).unwrap();
 
         entry.title = "New Title".to_string();
         entry.content = "new content here".to_string();
         idx.upsert(&entry).unwrap();
 
-        let hits = idx.search(&SearchQuery {
-            query: "new content".to_string(),
-            entity: None,
-            limit: 10,
-        }).unwrap();
+        let hits = idx
+            .search(&SearchQuery {
+                query: "new content".to_string(),
+                entity: None,
+                limit: 10,
+            })
+            .unwrap();
 
-        assert_eq!(hits.len(), 1, "upsert should result in exactly one document");
+        assert_eq!(
+            hits.len(),
+            1,
+            "upsert should result in exactly one document"
+        );
         assert_eq!(hits[0].title, "New Title");
     }
 
@@ -343,15 +391,25 @@ mod tests {
         let dir = TempDir::new().unwrap();
         let idx = make_index(&dir);
 
-        let entry = make_entry("01", "rust", None, "doc", "Title", "searchable content", vec![]);
+        let entry = make_entry(
+            "01",
+            "rust",
+            None,
+            "doc",
+            "Title",
+            "searchable content",
+            vec![],
+        );
         idx.upsert(&entry).unwrap();
         idx.remove(&MemoryId("01".to_string())).unwrap();
 
-        let hits = idx.search(&SearchQuery {
-            query: "searchable".to_string(),
-            entity: None,
-            limit: 10,
-        }).unwrap();
+        let hits = idx
+            .search(&SearchQuery {
+                query: "searchable".to_string(),
+                entity: None,
+                limit: 10,
+            })
+            .unwrap();
 
         assert!(hits.is_empty());
     }
@@ -362,18 +420,48 @@ mod tests {
         let idx = make_index(&dir);
 
         // 初期データ
-        idx.upsert(&make_entry("01", "rust", None, "old-doc", "Old", "old content", vec![])).unwrap();
+        idx.upsert(&make_entry(
+            "01",
+            "rust",
+            None,
+            "old-doc",
+            "Old",
+            "old content",
+            vec![],
+        ))
+        .unwrap();
 
         // 新しいデータで rebuild
-        let new_entries = vec![
-            make_entry("02", "rust", None, "new-doc", "New", "new content here", vec![]),
-        ];
+        let new_entries = vec![make_entry(
+            "02",
+            "rust",
+            None,
+            "new-doc",
+            "New",
+            "new content here",
+            vec![],
+        )];
         idx.rebuild(&mut new_entries.into_iter()).unwrap();
 
-        let old_hits = idx.search(&SearchQuery { query: "old".to_string(), entity: None, limit: 10 }).unwrap();
-        let new_hits = idx.search(&SearchQuery { query: "new".to_string(), entity: None, limit: 10 }).unwrap();
+        let old_hits = idx
+            .search(&SearchQuery {
+                query: "old".to_string(),
+                entity: None,
+                limit: 10,
+            })
+            .unwrap();
+        let new_hits = idx
+            .search(&SearchQuery {
+                query: "new".to_string(),
+                entity: None,
+                limit: 10,
+            })
+            .unwrap();
 
-        assert!(old_hits.is_empty(), "old documents should be gone after rebuild");
+        assert!(
+            old_hits.is_empty(),
+            "old documents should be gone after rebuild"
+        );
         assert_eq!(new_hits.len(), 1);
     }
 
@@ -393,16 +481,24 @@ mod tests {
         );
         idx.upsert(&entry).unwrap();
 
-        let hits = idx.search(&SearchQuery {
-            query: "fox".to_string(),
-            entity: None,
-            limit: 10,
-        }).unwrap();
+        let hits = idx
+            .search(&SearchQuery {
+                query: "fox".to_string(),
+                entity: None,
+                limit: 10,
+            })
+            .unwrap();
 
         assert_eq!(hits.len(), 1);
         if let Some(snippet) = hits[0].snippets.first() {
-            assert!(snippet.contains("<<"), "snippet should contain opening marker");
-            assert!(snippet.contains(">>"), "snippet should contain closing marker");
+            assert!(
+                snippet.contains("<<"),
+                "snippet should contain opening marker"
+            );
+            assert!(
+                snippet.contains(">>"),
+                "snippet should contain closing marker"
+            );
         }
     }
 }

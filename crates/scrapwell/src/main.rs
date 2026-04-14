@@ -1,14 +1,12 @@
 use std::{path::PathBuf, sync::Arc};
 
 use clap::{Parser, Subcommand};
-use rmcp::{ServiceExt, transport::stdio};
-use serde::Deserialize;
+use rmcp::{transport::stdio, ServiceExt};
 use scrapwell_core::{
+    index::tantivy_index::TantivySearchIndex, service::MemoryService, store::fs::FsMemoryStore,
     ScrapwellHandler,
-    index::tantivy_index::TantivySearchIndex,
-    service::MemoryService,
-    store::fs::FsMemoryStore,
 };
+use serde::Deserialize;
 
 // ---------- CLI ----------
 

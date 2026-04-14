@@ -3,7 +3,10 @@ use chrono::Utc;
 use crate::{
     error::{Result, ScrapwellError},
     index::SearchIndex,
-    model::{EntityMeta, EntityPatch, MemoryEntry, MemoryId, MemoryPatch, Scope, SearchHit, SearchQuery, TreeNode},
+    model::{
+        EntityMeta, EntityPatch, MemoryEntry, MemoryId, MemoryPatch, Scope, SearchHit, SearchQuery,
+        TreeNode,
+    },
     store::MemoryStore,
 };
 
@@ -63,7 +66,11 @@ impl<S: MemoryStore, I: SearchIndex> MemoryService<S, I> {
         description: Option<String>,
         tags: Option<Vec<String>>,
     ) -> Result<()> {
-        let patch = EntityPatch { scope, description, tags };
+        let patch = EntityPatch {
+            scope,
+            description,
+            tags,
+        };
         self.store.update_entity(&MemoryId(id), &patch)
     }
 
@@ -117,7 +124,11 @@ impl<S: MemoryStore, I: SearchIndex> MemoryService<S, I> {
         tags: Option<Vec<String>>,
     ) -> Result<()> {
         let memory_id = MemoryId(id);
-        let patch = MemoryPatch { title, content, tags };
+        let patch = MemoryPatch {
+            title,
+            content,
+            tags,
+        };
         self.store.update(&memory_id, &patch)?;
         // 更新後のエントリで検索インデックスを再構築（Phase 3 で Tantivy に差し替え）
         if let Some(entry) = self.store.get(&memory_id)? {
@@ -147,7 +158,11 @@ impl<S: MemoryStore, I: SearchIndex> MemoryService<S, I> {
         entity: Option<String>,
         limit: usize,
     ) -> Result<Vec<SearchHit>> {
-        self.index.search(&SearchQuery { query, entity, limit })
+        self.index.search(&SearchQuery {
+            query,
+            entity,
+            limit,
+        })
     }
 
     pub fn rebuild_index(&self) -> Result<usize> {
@@ -161,11 +176,7 @@ impl<S: MemoryStore, I: SearchIndex> MemoryService<S, I> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        error::ScrapwellError,
-        index::noop::NoopSearchIndex,
-        store::fs::FsMemoryStore,
-    };
+    use crate::{error::ScrapwellError, index::noop::NoopSearchIndex, store::fs::FsMemoryStore};
     use tempfile::TempDir;
 
     // ---------- ヘルパー ----------
@@ -317,16 +328,44 @@ mod tests {
         svc.create_entity("elasticsearch".to_string(), Scope::Knowledge, None, vec![])
             .unwrap();
 
-        svc.save_memory("rust".to_string(), "anyhow".to_string(), "Anyhow".to_string(), "C".to_string(), None, vec![]).unwrap();
-        svc.save_memory("rust".to_string(), "thiserror".to_string(), "Thiserror".to_string(), "C".to_string(), None, vec![]).unwrap();
-        svc.save_memory("elasticsearch".to_string(), "nested-vector".to_string(), "Nested".to_string(), "C".to_string(), Some("mapping".to_string()), vec![]).unwrap();
+        svc.save_memory(
+            "rust".to_string(),
+            "anyhow".to_string(),
+            "Anyhow".to_string(),
+            "C".to_string(),
+            None,
+            vec![],
+        )
+        .unwrap();
+        svc.save_memory(
+            "rust".to_string(),
+            "thiserror".to_string(),
+            "Thiserror".to_string(),
+            "C".to_string(),
+            None,
+            vec![],
+        )
+        .unwrap();
+        svc.save_memory(
+            "elasticsearch".to_string(),
+            "nested-vector".to_string(),
+            "Nested".to_string(),
+            "C".to_string(),
+            Some("mapping".to_string()),
+            vec![],
+        )
+        .unwrap();
 
         let tree = svc.list_memories(None, 2).unwrap();
 
         assert_eq!(tree.children.len(), 2);
 
         let rust = tree.children.iter().find(|n| n.name == "rust").unwrap();
-        let es = tree.children.iter().find(|n| n.name == "elasticsearch").unwrap();
+        let es = tree
+            .children
+            .iter()
+            .find(|n| n.name == "elasticsearch")
+            .unwrap();
 
         assert_eq!(rust.document_count, 2);
         assert_eq!(es.document_count, 1);
@@ -384,7 +423,11 @@ mod tests {
         .unwrap();
 
         // entity_id を取得
-        let entity = svc.store.get_entity_by_name("elasticsearch").unwrap().unwrap();
+        let entity = svc
+            .store
+            .get_entity_by_name("elasticsearch")
+            .unwrap()
+            .unwrap();
 
         svc.update_entity(
             entity.id.0.clone(),
@@ -394,7 +437,11 @@ mod tests {
         )
         .unwrap();
 
-        let updated = svc.store.get_entity_by_name("elasticsearch").unwrap().unwrap();
+        let updated = svc
+            .store
+            .get_entity_by_name("elasticsearch")
+            .unwrap()
+            .unwrap();
         assert_eq!(updated.scope, Scope::Project);
         assert_eq!(updated.description, Some("new description".to_string()));
         assert_eq!(updated.tags, vec!["new-tag".to_string()]);
@@ -466,12 +513,32 @@ mod tests {
     fn rebuild_index_returns_document_count() {
         let (svc, _dir) = make_service();
 
-        svc.create_entity("rust".to_string(), Scope::Knowledge, None, vec![]).unwrap();
-        svc.save_memory("rust".to_string(), "anyhow".to_string(), "Anyhow".to_string(), "Content A".to_string(), None, vec![]).unwrap();
-        svc.save_memory("rust".to_string(), "thiserror".to_string(), "Thiserror".to_string(), "Content B".to_string(), None, vec![]).unwrap();
+        svc.create_entity("rust".to_string(), Scope::Knowledge, None, vec![])
+            .unwrap();
+        svc.save_memory(
+            "rust".to_string(),
+            "anyhow".to_string(),
+            "Anyhow".to_string(),
+            "Content A".to_string(),
+            None,
+            vec![],
+        )
+        .unwrap();
+        svc.save_memory(
+            "rust".to_string(),
+            "thiserror".to_string(),
+            "Thiserror".to_string(),
+            "Content B".to_string(),
+            None,
+            vec![],
+        )
+        .unwrap();
 
         let count = svc.rebuild_index().unwrap();
-        assert_eq!(count, 2, "rebuild should report number of indexed documents");
+        assert_eq!(
+            count, 2,
+            "rebuild should report number of indexed documents"
+        );
     }
 
     #[test]
