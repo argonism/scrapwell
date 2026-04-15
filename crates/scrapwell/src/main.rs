@@ -29,13 +29,22 @@ struct Cli {
 
 // ---------- Config ----------
 
-/// ~/.config/scrapwell/config.toml から読み込む設定
 #[derive(Deserialize, Default)]
 struct Config {
     root: Option<PathBuf>,
 }
 
-fn load_config() -> Config {
+impl Config {
+    /// self が高優先度、base が低優先度。各 Option フィールドで self の Some を優先する。
+    fn merge_over(self, base: Config) -> Config {
+        Config {
+            root: self.root.or(base.root),
+        }
+    }
+}
+
+/// user スコープ: ~/.config/scrapwell/config.toml
+fn load_user_config() -> Config {
     let Some(path) = dirs::config_dir().map(|p| p.join("scrapwell").join("config.toml")) else {
         return Config::default();
     };
@@ -45,13 +54,40 @@ fn load_config() -> Config {
     toml::from_str(&content).unwrap_or_default()
 }
 
-/// root の決定順位: CLI --root > 環境変数 SCRAPWELL_ROOT > config.toml > ~/.memory
+/// project スコープ: カレントディレクトリから祖先方向に .scrapwell.toml を探す
+fn find_project_config_path() -> Option<PathBuf> {
+    let cwd = std::env::current_dir().ok()?;
+    let mut dir = cwd.as_path();
+    loop {
+        let candidate = dir.join(".scrapwell.toml");
+        if candidate.is_file() {
+            return Some(candidate);
+        }
+        dir = dir.parent()?;
+    }
+}
+
+fn load_project_config() -> Config {
+    let Some(path) = find_project_config_path() else {
+        return Config::default();
+    };
+    let Ok(content) = std::fs::read_to_string(&path) else {
+        return Config::default();
+    };
+    toml::from_str(&content).unwrap_or_default()
+}
+
+/// root の決定順位:
+///   1. CLI --root / SCRAPWELL_ROOT 環境変数  (clap が処理)
+///   2. project config (.scrapwell.toml を祖先方向に検索)
+///   3. user config    (~/.config/scrapwell/config.toml)
+///   4. デフォルト     (~/.memory)
 fn resolve_root(cli_root: Option<PathBuf>) -> PathBuf {
     if let Some(root) = cli_root {
         return root;
     }
-    let config = load_config();
-    if let Some(root) = config.root {
+    let merged = load_project_config().merge_over(load_user_config());
+    if let Some(root) = merged.root {
         return root;
     }
     dirs::home_dir()
