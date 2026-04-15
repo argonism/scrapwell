@@ -1,6 +1,6 @@
 # scrapwell
 
-A minimal MCP memory server for LLM agents. No extra LLM calls. No server to run. Just human-readable Markdown files on disk — fully searchable, with usage prompts bundled in the tools themselves.
+A minimal MCP memory server for LLM agents. No hidden LLM calls. No server to run. Just human-readable Markdown files on disk — fully searchable, with usage prompts bundled in the tools themselves.
 
 ## Quick Start
 
