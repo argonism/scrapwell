@@ -14,101 +14,97 @@ use crate::{
     store::MemoryStore,
 };
 
-// ---------- ツールパラメータ型 ----------
+// ---------- Tool parameter types ----------
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
 struct CreateEntityParams {
-    /// Entity 名。kebab-case（例: "elasticsearch", "my-project"）。小文字・数字・ハイフンのみ。
+    /// Entity name. kebab-case (e.g. "elasticsearch", "my-project"). Lowercase letters, digits, and hyphens only.
     name: String,
-    /// "knowledge"（汎用的な知識）または "project"（プロジェクト固有の文脈）
+    /// "knowledge" (general reusable knowledge) or "project" (project-specific context)
     scope: String,
-    /// この Entity が何を表すかの説明（任意）
+    /// Description of what this Entity represents (optional)
     description: Option<String>,
-    /// Entity レベルのタグ（任意）。パス情報（entity 名など）は重複して入れないこと。
+    /// Entity-level tags (optional). Do not duplicate path information (e.g. the entity name itself).
     tags: Option<Vec<String>>,
 }
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
 struct SaveMemoryParams {
-    /// 保存先 Entity 名。事前に create_entity で作成済みであること。
+    /// Target Entity name. Must already exist (create with create_entity first).
     entity: String,
-    /// ドキュメントのファイル名。vault 全体で一意な kebab-case 文字列（例: "nested-dense-vector"）。
-    /// 重複時はエラーになるので、suffix を付けてリトライすること。
+    /// Document filename. Must be unique across the entire vault; kebab-case (e.g. "nested-dense-vector").
+    /// On conflict, append a suffix and retry.
     name: String,
-    /// ドキュメントのタイトル
+    /// Document title
     title: String,
-    /// Markdown 本文。[[wikilink]] 記法で他ドキュメントへのリンクを張れる。
+    /// Markdown body. Use [[wikilink]] syntax to link to other documents.
     content: String,
-    /// Topic 名（任意）。同一 Entity 内のドキュメントが ~7 件を超えかつ明確なサブテーマ境界がある場合のみ使用。
+    /// Topic name (optional). Use only when the Entity has ~7+ documents and a clear sub-theme boundary exists.
     topic: Option<String>,
-    /// 横断的タグ（任意）。パス情報は重複させないこと。
+    /// Cross-cutting tags (optional). Do not duplicate path information.
     tags: Option<Vec<String>>,
 }
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
 struct GetMemoryParams {
-    /// ドキュメント ID（ULID 形式）
+    /// Document ID (ULID)
     id: String,
 }
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
 struct ListMemoriesParams {
-    /// 特定 Entity に絞り込む場合は Entity 名を指定。省略で全 Entity を返す。
+    /// Filter by Entity name. Omit to return all Entities.
     entity: Option<String>,
-    /// ツリーの展開深さ。1 = Entity のみ、2 = Entity + Topic（デフォルト: 2）
+    /// Tree expansion depth. 1 = Entities only, 2 = Entities + Topics (default: 2)
     depth: Option<u32>,
 }
-
-// ---------- Phase 3/4 パラメータ型 ----------
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
 struct RebuildIndexParams {}
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
 struct SearchMemoryParams {
-    /// 検索キーワード。title・content・tags を横断して検索する。
+    /// Search query. Searches across title, content, and tags.
     query: String,
-    /// 特定 Entity に絞り込む場合は Entity 名を指定（任意）
+    /// Filter by Entity name (optional)
     entity: Option<String>,
-    /// 最大取得件数（デフォルト: 10）
+    /// Maximum number of results (default: 10)
     limit: Option<usize>,
 }
 
-// ---------- Phase 2 パラメータ型 ----------
-
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
 struct UpdateEntityParams {
-    /// 対象 Entity の ID（ULID 形式）
+    /// Target Entity ID (ULID)
     id: String,
-    /// 新しいスコープ（任意）
+    /// New scope (optional)
     scope: Option<String>,
-    /// 新しい説明（任意）
+    /// New description (optional)
     description: Option<String>,
-    /// 新しいタグ（任意、全置換）
+    /// New tags (optional, full replacement)
     tags: Option<Vec<String>>,
 }
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
 struct DeleteEntityParams {
-    /// 対象 Entity の ID（ULID 形式）
+    /// Target Entity ID (ULID)
     id: String,
 }
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
 struct UpdateMemoryParams {
-    /// 対象ドキュメントの ID（ULID 形式）
+    /// Target document ID (ULID)
     id: String,
-    /// 新しいタイトル（任意）
+    /// New title (optional)
     title: Option<String>,
-    /// 新しい本文（任意）
+    /// New body (optional)
     content: Option<String>,
-    /// 新しいタグ（任意、全置換）
+    /// New tags (optional, full replacement)
     tags: Option<Vec<String>>,
 }
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
 struct DeleteMemoryParams {
-    /// 対象ドキュメントの ID（ULID 形式）
+    /// Target document ID (ULID)
     id: String,
 }
 
@@ -179,13 +175,12 @@ where
         }
     }
 
-    #[tool(description = "新しい Entity を作成する。\n\
-        Entity は知識の対象（技術・ライブラリ・プロジェクト等）を表す。\n\
-        保存前にまず list_memories で既存の Entity 一覧を確認し、\n\
-        類似した Entity が既に存在しないか確認すること。\n\
-        name は kebab-case（小文字・数字・ハイフンのみ）で指定。\n\
-        類似名が存在する場合は error='similar_entity_exists' で候補を返す。\n\
-        意図的に別 Entity として作成したい場合は無視してよい。")]
+    #[tool(description = "Create a new Entity.\n\
+        An Entity represents the subject of knowledge (technology, library, project, etc.).\n\
+        Before creating, call list_memories to check for existing Entities and avoid duplicates.\n\
+        name must be kebab-case (lowercase letters, digits, and hyphens only).\n\
+        If a similar name exists, returns error='similar_entity_exists' with suggestions.\n\
+        You may ignore the warning if you intentionally want a separate Entity.")]
     fn create_entity(
         &self,
         Parameters(p): Parameters<CreateEntityParams>,
@@ -218,8 +213,8 @@ where
     }
 
     #[tool(
-        description = "既存 Entity の部分更新。指定したフィールドのみ変更される。\n\
-        scope・description・tags のうち指定したものだけ更新する。"
+        description = "Partially update an existing Entity. Only the specified fields are changed.\n\
+        Updates scope, description, and/or tags — only the fields you provide."
     )]
     fn update_entity(
         &self,
@@ -242,8 +237,8 @@ where
     }
 
     #[tool(
-        description = "Entity を削除する。配下のドキュメント・Topic ディレクトリもカスケード削除される。\n\
-        この操作は取り消せない。"
+        description = "Delete an Entity. All documents and Topic directories under it are cascade-deleted.\n\
+        This operation cannot be undone."
     )]
     fn delete_entity(
         &self,
@@ -255,17 +250,17 @@ where
             .map_err(|e| e.to_string())
     }
 
-    #[tool(description = "ドキュメントをメモリに保存する。\n\
-        【保存前に必ず行うこと】\n\
-        1. list_memories で既存の Entity・Topic 構造を確認する\n\
-        2. 保存先 Entity が存在しない場合は create_entity で先に作成する\n\
-        【Topic の使い方】\n\
-        同一 Entity 内のドキュメントが ~7 件を超え、かつ明確なサブテーマ境界がある場合のみ topic を指定する。\n\
-        1〜2 件しか入らない Topic は作らず Entity 直下に置く。\n\
-        【name の重複】\n\
-        name は vault 全体で一意でなければならない。重複時はエラーになるので suffix を付けてリトライすること。\n\
-        【tags】\n\
-        パス情報（entity 名・topic 名）は tags に重複させないこと。横断的な関心事のみ記載する。")]
+    #[tool(description = "Save a document to memory.\n\
+        [Before saving]\n\
+        1. Call list_memories to check the existing Entity/Topic structure.\n\
+        2. If the target Entity does not exist, create it first with create_entity.\n\
+        [Topics]\n\
+        Only use a topic when the Entity has ~7+ documents and a clear sub-theme boundary exists.\n\
+        If only 1-2 documents would go under a topic, place them directly under the Entity instead.\n\
+        [name uniqueness]\n\
+        name must be unique across the entire vault. On conflict, append a suffix and retry.\n\
+        [tags]\n\
+        Do not duplicate path information (entity name, topic name) in tags. Only add cross-cutting concerns.")]
     fn save_memory(&self, Parameters(p): Parameters<SaveMemoryParams>) -> Result<String, String> {
         self.service
             .save_memory(
@@ -281,8 +276,8 @@ where
     }
 
     #[tool(
-        description = "既存ドキュメントの部分更新。指定したフィールドのみ変更される。\n\
-        title・content・tags のうち指定したものだけ更新する。"
+        description = "Partially update an existing document. Only the specified fields are changed.\n\
+        Updates title, content, and/or tags — only the fields you provide."
     )]
     fn update_memory(
         &self,
@@ -294,10 +289,10 @@ where
             .map_err(|e| e.to_string())
     }
 
-    #[tool(description = "検索インデックスを全件再構築する。\n\
-        Tantivy インデックスが破損した場合や手動でファイルを編集した後に実行する。\n\
-        SQLite に記録された全ドキュメントを読み直してインデックスを作り直す。\n\
-        完了後に rebuilt（再インデックス件数）を返す。")]
+    #[tool(description = "Rebuild the search index from scratch.\n\
+        Run this when the Tantivy index is corrupted or after manually editing Markdown files.\n\
+        Re-reads all documents recorded in SQLite and rebuilds the index.\n\
+        Returns the number of documents reindexed.")]
     fn rebuild_index(
         &self,
         Parameters(_): Parameters<RebuildIndexParams>,
@@ -308,11 +303,11 @@ where
             .map_err(|e| e.to_string())
     }
 
-    #[tool(description = "キーワードで全文検索する。\n\
-        title・content・tags を横断して検索し、スニペット（<<ハイライト>> 形式）付きで結果を返す。\n\
-        entity を指定すると特定の Entity 内に絞り込める。\n\
-        検索結果の id を使って get_memory で全内容を取得できる。\n\
-        検索結果が 0 件の場合は空配列を返す。")]
+    #[tool(description = "Full-text search by keyword.\n\
+        Searches across title, content, and tags; returns results with highlighted snippets (<<highlight>> format).\n\
+        Optionally filter to a specific Entity with the entity parameter.\n\
+        Use the id from results with get_memory to fetch the full document.\n\
+        Returns an empty array when no results are found.")]
     fn search_memory(
         &self,
         Parameters(p): Parameters<SearchMemoryParams>,
@@ -324,8 +319,8 @@ where
     }
 
     #[tool(
-        description = "ドキュメントを削除する。Markdown ファイルとインデックスエントリを除去する。\n\
-        この操作は取り消せない。"
+        description = "Delete a document. Removes the Markdown file and its index entry.\n\
+        This operation cannot be undone."
     )]
     fn delete_memory(
         &self,
@@ -337,8 +332,8 @@ where
             .map_err(|e| e.to_string())
     }
 
-    #[tool(description = "ドキュメントの全内容を ID で取得する。\n\
-        ID は save_memory の返却値、または list_memories（未実装）で得た ULID 文字列。")]
+    #[tool(description = "Fetch the full content of a document by ID.\n\
+        The ID is the ULID returned by save_memory or obtained from search_memory results.")]
     fn get_memory(&self, Parameters(p): Parameters<GetMemoryParams>) -> Result<String, String> {
         let id = MemoryId(p.id);
         match self.service.get_memory(&id) {
@@ -348,10 +343,10 @@ where
         }
     }
 
-    #[tool(description = "Entity・Topic のツリー構造を一覧表示する。\n\
-        ドキュメントを保存する前に必ずこのツールで既存構造を確認すること。\n\
-        entity を省略すると全 Entity の一覧を返す。\n\
-        depth=1 で Entity のみ、depth=2（デフォルト）で Topic まで展開する。")]
+    #[tool(description = "List the Entity/Topic tree structure.\n\
+        Always call this before saving a document to check the existing structure.\n\
+        Omit entity to return all Entities.\n\
+        depth=1 returns Entities only; depth=2 (default) also expands Topics.")]
     fn list_memories(
         &self,
         Parameters(p): Parameters<ListMemoriesParams>,
