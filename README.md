@@ -213,3 +213,35 @@ scrapwell rebuild
 scrapwell rebuild --target metadata  # SQLiteのみ
 scrapwell rebuild --target search    # 検索インデックスのみ
 ```
+
+---
+
+## 開発者向け
+
+### ビルド
+
+```bash
+cargo build --release
+# バイナリ: target/release/scrapwell
+```
+
+### テスト
+
+```bash
+cargo test --workspace
+```
+
+### Lint
+
+```bash
+cargo fmt --all -- --check
+cargo clippy --workspace --all-targets -- -D warnings
+```
+
+### pre-push フックの設定
+
+クローン後に一度だけ実行してください。push 前に fmt と clippy が自動で走ります。
+
+```bash
+git config core.hooksPath .githooks
+```
