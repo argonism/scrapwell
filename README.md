@@ -81,7 +81,6 @@ Config is resolved in priority order:
 CLI --root / SCRAPWELL_ROOT env var
   > .scrapwell.toml   (project config — searched upward from cwd, git-style)
   > ~/.config/scrapwell/config.toml   (user config)
-  > ~/.memory   (default)
 ```
 
 **User config** (`~/.config/scrapwell/config.toml`):
