@@ -20,36 +20,33 @@ LLMエージェント（主にClaude Code）がタスク遂行中に獲得した
 
 ## インストール
 
+**macOS / Linux（shell installer）**
+
 ```bash
-git clone https://github.com/your-org/scrapwell
-cd scrapwell
-cargo build --release
-# バイナリは target/release/scrapwell に生成される
+curl --proto '=https' --tlsv1.2 -LsSf \
+  https://github.com/argonism/scrapwell/releases/latest/download/scrapwell-installer.sh | sh
 ```
 
-デフォルトは tantivy 検索バックエンドを有効にしてビルドされます。
+**macOS（Homebrew）**
 
 ```bash
-# tantivy バックエンド（デフォルト）
-cargo build --release
-
-# 検索バックエンドなし（メタデータのみ）
-cargo build --release --no-default-features
+brew install argonism/tap/scrapwell
 ```
 
 ## Claude Codeとの統合
 
-`~/.claude/settings.json`（またはプロジェクトの `.claude/settings.json`）に以下を追加します。
+インストール後、以下のコマンドで Claude Code に登録します。
 
-```json
-{
-  "mcpServers": {
-    "scrapwell": {
-      "command": "/path/to/scrapwell",
-      "args": []
-    }
-  }
-}
+```bash
+claude mcp add scrapwell --scope user scrapwell serve
+```
+
+保存先を変えたい場合は環境変数で指定できます。
+
+```bash
+claude mcp add scrapwell --scope user \
+  --env SCRAPWELL_ROOT=/path/to/vault \
+  scrapwell serve
 ```
 
 ## 設定
