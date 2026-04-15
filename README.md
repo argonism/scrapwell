@@ -54,6 +54,14 @@ Knowledge is organized in a flat **Entity > Topic > Document** hierarchy.
 
 Each document is a plain Markdown file with a small YAML frontmatter. SQLite and the search index are derived data — delete them and run `scrapwell rebuild` to regenerate from Markdown.
 
+## Obsidian
+
+The memory directory is a valid Obsidian vault out of the box. Just open `~/.memory/` (or your configured root) as a vault.
+
+- Documents use `[[wikilink]]` syntax for cross-references — the graph view shows knowledge connections automatically
+- All filenames are unique across the vault, so wikilinks resolve without ambiguity
+- Edit or annotate documents directly in Obsidian; scrapwell reads the Markdown as-is
+
 ## MCP Tools
 
 10 tools over stdio. Claude Code calls these directly.
