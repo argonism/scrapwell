@@ -147,14 +147,19 @@ pub fn run_entity<S: MemoryStore, I: SearchIndex>(
             } else if entities.is_empty() {
                 println!("No entities found.");
             } else {
-                println!("{:<28} {:<24} {}", "ID", "NAME", "SCOPE");
+                println!("{:<28} {:<24} SCOPE", "ID", "NAME");
                 println!("{}", "-".repeat(60));
                 for e in &entities {
                     println!("{:<28} {:<24} {}", e.id, e.name, scope_str(e.scope));
                 }
             }
         }
-        EntityCmd::Create { name, scope, desc, tags } => {
+        EntityCmd::Create {
+            name,
+            scope,
+            desc,
+            tags,
+        } => {
             let scope = parse_scope(&scope)?;
             match service.create_entity(name.clone(), scope, desc, tags) {
                 Ok(id) => println!("Created entity '{}' (id: {})", name, id),
@@ -202,7 +207,12 @@ pub fn run_memory<S: MemoryStore, I: SearchIndex>(
                 }
             }
         }
-        MemoryCmd::Search { query, entity, limit, json } => {
+        MemoryCmd::Search {
+            query,
+            entity,
+            limit,
+            json,
+        } => {
             let hits = service.search_memory(query, entity, limit)?;
             if json {
                 println!("{}", serde_json::to_string_pretty(&hits)?);
@@ -234,7 +244,15 @@ pub fn run_memory<S: MemoryStore, I: SearchIndex>(
                 None => bail!("document '{}' not found", id),
             }
         }
-        MemoryCmd::Save { entity, name, title, content, file, topic, tags } => {
+        MemoryCmd::Save {
+            entity,
+            name,
+            title,
+            content,
+            file,
+            topic,
+            tags,
+        } => {
             let body = resolve_content(content, file)?;
             let id = service
                 .save_memory(entity.clone(), name.clone(), title, body, topic, tags)
@@ -260,7 +278,10 @@ fn parse_scope(s: &str) -> Result<Scope> {
     match s {
         "knowledge" => Ok(Scope::Knowledge),
         "project" => Ok(Scope::Project),
-        other => bail!("invalid scope '{}': must be 'knowledge' or 'project'", other),
+        other => bail!(
+            "invalid scope '{}': must be 'knowledge' or 'project'",
+            other
+        ),
     }
 }
 
@@ -302,8 +323,10 @@ fn format_tree(root: &TreeNode) -> String {
     root.children
         .iter()
         .map(|entity| {
-            let mut lines =
-                vec![format!("{}/  ({} documents)", entity.name, entity.document_count)];
+            let mut lines = vec![format!(
+                "{}/  ({} documents)",
+                entity.name, entity.document_count
+            )];
             for topic in &entity.children {
                 lines.push(format!(
                     "  {}/  ({} documents)",
