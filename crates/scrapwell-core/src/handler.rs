@@ -251,6 +251,7 @@ where
     }
 
     #[tool(description = "Save a document to memory.\n\
+        Write the title and content in the same language the user is using.\n\
         [Before saving]\n\
         1. Call list_memories to check the existing Entity/Topic structure.\n\
         2. If the target Entity does not exist, create it first with create_entity.\n\
