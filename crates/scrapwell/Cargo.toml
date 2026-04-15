@@ -2,6 +2,10 @@
 name = "scrapwell"
 version = "0.1.0"
 edition = "2021"
+description = "MCP memory server for LLM agents"
+homepage = "https://github.com/argonism/scrapwell"
+repository = "https://github.com/argonism/scrapwell"
+license = "MIT"
 
 [dependencies]
 anyhow = "1"
