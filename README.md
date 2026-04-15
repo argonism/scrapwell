@@ -1,47 +1,47 @@
 # scrapwell
 
-LLMエージェント（主にClaude Code）がタスク遂行中に獲得した知識を、ローカルに永続化・検索するための軽量MCPサーバー。
+A lightweight MCP server for persisting and searching knowledge acquired by LLM agents (primarily Claude Code) during task execution — stored locally.
 
-## 動機
+## Motivation
 
-- Claude Codeで仕事や個人プロジェクトをこなす中で得た知見が、セッション間で失われる
-- 既存のメモリツール（Mem0等）は裏でLLMを叩いてファクト抽出するが、追加のLLMコストを避けたい
-- Claude Code自身がファクト抽出・分類を行い、MCPサーバーは純粋にストレージ＋インデックスとして機能すべき
-- 保存された知識はそのままObsidian vaultとして開けるMarkdownファイルとして残したい
+- Insights gained while working on projects with Claude Code are lost between sessions
+- Existing memory tools (e.g., Mem0) extract facts by calling an LLM under the hood, which incurs additional LLM costs we want to avoid
+- Fact extraction and classification should be handled by the calling LLM itself; the MCP server should act purely as a storage + index layer
+- Saved knowledge should remain as Markdown files that can be opened directly as an Obsidian vault
 
-## 特徴
+## Features
 
-- **追加LLMコストなし** — ファクト抽出・分類の判断は呼び出し元のLLMが担う
-- **Markdownがsource of truth** — SQLiteとSearchIndexは派生データ。壊れても再構築可能
-- **Obsidian互換** — `[[wikilink]]` 記法、vault全体でユニークなファイル名
-- **差し替え可能な検索バックエンド** — trait境界でtantivy/lancedbを疎結合に抽象化
-- **Entity-Documentモデル** — Entity > Topic > Document の3層構造で知識を整理
-- **ガイドライン内包** — MCPツールのdescriptionに使い方を埋め込み、CLAUDE.mdへの記述を最小化
+- **No additional LLM cost** — fact extraction and classification decisions are handled by the calling LLM
+- **Markdown as source of truth** — SQLite and SearchIndex are derived data; they can be rebuilt if corrupted
+- **Obsidian-compatible** — `[[wikilink]]` syntax, vault-wide unique filenames
+- **Swappable search backend** — tantivy/lancedb loosely coupled behind a trait boundary
+- **Entity-Document model** — knowledge organized in a 3-tier structure: Entity > Topic > Document
+- **Self-contained guidelines** — usage instructions embedded in MCP tool descriptions, minimizing CLAUDE.md entries
 
-## インストール
+## Installation
 
-**macOS / Linux（shell installer）**
+**macOS / Linux (shell installer)**
 
 ```bash
 curl --proto '=https' --tlsv1.2 -LsSf \
   https://github.com/argonism/scrapwell/releases/latest/download/scrapwell-installer.sh | sh
 ```
 
-**macOS（Homebrew）**
+**macOS (Homebrew)**
 
 ```bash
 brew install argonism/tap/scrapwell
 ```
 
-## Claude Codeとの統合
+## Integration with Claude Code
 
-インストール後、以下のコマンドで Claude Code に登録します。
+After installation, register with Claude Code using the following command:
 
 ```bash
 claude mcp add scrapwell --scope user scrapwell serve
 ```
 
-保存先を変えたい場合は環境変数で指定できます。
+To use a custom storage location, specify it via an environment variable:
 
 ```bash
 claude mcp add scrapwell --scope user \
@@ -49,54 +49,54 @@ claude mcp add scrapwell --scope user \
   scrapwell serve
 ```
 
-## 設定
+## Configuration
 
-設定ファイルは任意です。存在しない場合はすべてデフォルト値で動作します。
+The configuration file is optional. If absent, all defaults apply.
 
 **`~/.memory/config.toml`**
 
 ```toml
-# メモリルートパス（デフォルト: ~/.memory/）
+# Memory root path (default: ~/.memory/)
 root = "~/.memory/"
 
-# 検索バックエンド（デフォルト: "tantivy"）
+# Search backend (default: "tantivy")
 # "tantivy" | "lancedb"
 search_backend = "tantivy"
 ```
 
-## データ構造
+## Data Structure
 
-知識は **Entity > Topic > Document** の3層モデルで管理されます。
+Knowledge is managed using a 3-tier **Entity > Topic > Document** model.
 
-| 層 | 説明 |
+| Layer | Description |
 |---|---|
-| **Entity** | 知識の対象（技術・プロジェクト・ライブラリ・概念など） |
-| **Topic** | Entity内のサブテーマ分類（任意。ドキュメントが~7件超かつ明確な境界がある場合に作成） |
-| **Document** | 個別の知見。Markdownファイル1つが1ドキュメント |
+| **Entity** | The subject of knowledge (technology, project, library, concept, etc.) |
+| **Topic** | Sub-theme classification within an Entity (optional; created when ~7+ documents exist and clear boundaries are present) |
+| **Document** | An individual piece of knowledge. One Markdown file = one Document |
 
-**ディスク上の物理構造**
+**Physical structure on disk**
 
 ```
 ~/.memory/
   config.toml
-  metadata.db          # SQLite（メタデータ管理）
-  index/               # SearchIndexが管理する派生データ
+  metadata.db          # SQLite (metadata management)
+  index/               # Derived data managed by SearchIndex
 
   entities/
     elasticsearch/
-      _entity.md                   # Entityメタデータ
+      _entity.md                   # Entity metadata
       mapping/                     # topic
         nested-dense-vector.md
         dynamic-templates.md
       performance/                 # topic
         shard-sizing.md
-      reindex-strategy.md          # topicなし直下ドキュメント
+      reindex-strategy.md          # document directly under entity (no topic)
     rust/
       _entity.md
       anyhow-vs-thiserror.md
 ```
 
-**Entityメタデータ（`_entity.md`）**
+**Entity metadata (`_entity.md`)**
 
 ```markdown
 ---
@@ -107,10 +107,10 @@ created_at: "2026-04-06T12:00:00Z"
 updated_at: "2026-04-06T12:00:00Z"
 ---
 
-Elasticsearch に関する知見。
+Knowledge about Elasticsearch.
 ```
 
-**ドキュメント**
+**Document**
 
 ```markdown
 ---
@@ -121,51 +121,51 @@ created_at: "2026-04-06T12:00:00Z"
 updated_at: "2026-04-06T12:00:00Z"
 ---
 
-Elasticsearchでnested fieldの中にdense_vectorを持たせる場合...
+When placing a dense_vector inside a nested field in Elasticsearch...
 
-関連: [[anyhow-vs-thiserror]]
+Related: [[anyhow-vs-thiserror]]
 ```
 
-## MCPツール一覧
+## MCP Tools
 
-全10ツール（Write 6 / Read 3 / Admin 1）、トランスポートは **stdio**。
+10 tools in total (Write 6 / Read 3 / Admin 1), transport: **stdio**.
 
-### Writeツール
+### Write Tools
 
-| ツール | 説明 |
+| Tool | Description |
 |---|---|
-| `create_entity` | 新規Entityを作成。類似名チェック（編集距離）つき |
-| `update_entity` | 既存Entityの部分更新 |
-| `delete_entity` | Entityと配下ドキュメントをカスケード削除 |
-| `save_memory` | 新規ドキュメントを保存 |
-| `update_memory` | 既存ドキュメントの部分更新 |
-| `delete_memory` | ドキュメントを削除 |
+| `create_entity` | Create a new Entity. Includes similar-name check (edit distance) |
+| `update_entity` | Partial update of an existing Entity |
+| `delete_entity` | Cascade delete an Entity and its documents |
+| `save_memory` | Save a new Document |
+| `update_memory` | Partial update of an existing Document |
+| `delete_memory` | Delete a Document |
 
-### Readツール
+### Read Tools
 
-| ツール | 説明 |
+| Tool | Description |
 |---|---|
-| `search_memory` | 全文検索。ハイライト付きスニペットを返す |
-| `list_memories` | Entity/Topicのツリー構造を返す |
-| `get_memory` | 単一ドキュメントの全内容を取得 |
+| `search_memory` | Full-text search. Returns highlighted snippets |
+| `list_memories` | Returns the Entity/Topic tree structure |
+| `get_memory` | Retrieve the full content of a single Document |
 
-### Adminツール
+### Admin Tools
 
-| ツール | 説明 |
+| Tool | Description |
 |---|---|
-| `rebuild_index` | MarkdownからSQLiteと検索インデックスを再構築 |
+| `rebuild_index` | Rebuild SQLite and search index from Markdown |
 
-## アーキテクチャ
+## Architecture
 
 ```
 ┌─────────────────────────────┐
-│  Transport (main.rs)        │  MCP stdio、DI
+│  Transport (main.rs)        │  MCP stdio, DI
 ├─────────────────────────────┤
-│  Application (handler.rs)   │  MCPツールディスパッチのみ
+│  Application (handler.rs)   │  MCP tool dispatch only
 ├─────────────────────────────┤
-│  Service (service/)         │  ビジネスロジック
+│  Service (service/)         │  Business logic
 ├─────────────────────────────┤
-│  Domain (model, path)       │  データ構造、バリデーション
+│  Domain (model, path)       │  Data structures, validation
 ├─────────────────────────────┤
 │  Infrastructure             │  trait MemoryStore → FsMemoryStore
 │                             │  trait SearchIndex → TantivySearchIndex
@@ -178,51 +178,51 @@ Elasticsearchでnested fieldの中にdense_vectorを持たせる場合...
 scrapwell/
   Cargo.toml                  # workspace root
   crates/
-    scrapwell-core/           # library crate（ビジネスロジック）
-    scrapwell/                # binary crate（MCP stdio transport、設定、DI）
+    scrapwell-core/           # library crate (business logic)
+    scrapwell/                # binary crate (MCP stdio transport, config, DI)
 ```
 
-詳細は [`docs/architecture.md`](docs/architecture.md) を参照してください。
+For details, see [`docs/architecture.md`](docs/architecture.md).
 
-## ドキュメント
+## Documentation
 
-- [`docs/directory-structure.md`](docs/directory-structure.md) — Entity-Documentモデル、パス規約、tags
-- [`docs/mcp-tools.md`](docs/mcp-tools.md) — 全10ツールのインターフェース定義
-- [`docs/architecture.md`](docs/architecture.md) — Cargo workspace構成、trait定義、データフロー
-- [`docs/dependencies.md`](docs/dependencies.md) — 主要な外部依存
-- [`docs/roadmap.md`](docs/roadmap.md) — 未実装・将来の拡張
+- [`docs/directory-structure.md`](docs/directory-structure.md) — Entity-Document model, path conventions, tags
+- [`docs/mcp-tools.md`](docs/mcp-tools.md) — Interface definitions for all 10 tools
+- [`docs/architecture.md`](docs/architecture.md) — Cargo workspace structure, trait definitions, data flow
+- [`docs/dependencies.md`](docs/dependencies.md) — Key external dependencies
+- [`docs/roadmap.md`](docs/roadmap.md) — Unimplemented features and future extensions
 
-## ロードマップ
+## Roadmap
 
-- タグベースの横断検索ツール（専用MCPツール）
-- LanceDB backend（embedding検索が必要な場合）
-- HTTP/SSEトランスポート（Claude Code以外のクライアント対応）
-- エクスポート/インポート
+- Tag-based cross-search tool (dedicated MCP tool)
+- LanceDB backend (for embedding-based search)
+- HTTP/SSE transport (support for non-Claude Code clients)
+- Export/import
 
-## CLIコマンド
+## CLI Commands
 
 ```bash
-# MCPサーバーとして起動（Claude Codeから呼び出される通常の使い方）
+# Start as MCP server (normal usage invoked from Claude Code)
 scrapwell serve
 
-# インデックスを再構築（破損時のリカバリ）
+# Rebuild index (recovery from corruption)
 scrapwell rebuild
-scrapwell rebuild --target metadata  # SQLiteのみ
-scrapwell rebuild --target search    # 検索インデックスのみ
+scrapwell rebuild --target metadata  # SQLite only
+scrapwell rebuild --target search    # Search index only
 ```
 
 ---
 
-## 開発者向け
+## For Developers
 
-### ビルド
+### Build
 
 ```bash
 cargo build --release
-# バイナリ: target/release/scrapwell
+# Binary: target/release/scrapwell
 ```
 
-### テスト
+### Test
 
 ```bash
 cargo test --workspace
@@ -235,9 +235,9 @@ cargo fmt --all -- --check
 cargo clippy --workspace --all-targets -- -D warnings
 ```
 
-### pre-push フックの設定
+### Setting up pre-push hook
 
-クローン後に一度だけ実行してください。push 前に fmt と clippy が自動で走ります。
+Run once after cloning. This will automatically run fmt and clippy before each push.
 
 ```bash
 git config core.hooksPath .githooks
