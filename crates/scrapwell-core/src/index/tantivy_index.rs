@@ -15,29 +15,29 @@ use crate::{
     model::{MemoryEntry, MemoryId, SearchHit, SearchQuery},
 };
 
-// ---------- スキーマ ----------
+// ---------- Schema ----------
 
 fn build_schema() -> Schema {
     let mut b = Schema::builder();
-    // STRING: トークン化なし（完全一致・削除キー）、STORED: 取得用
+    // STRING: no tokenization (exact match / deletion key), STORED: for retrieval
     b.add_text_field("id", STRING | STORED);
     b.add_text_field("entity", STRING | STORED);
     b.add_text_field("topic", STRING | STORED);
     b.add_text_field("name", STRING | STORED);
-    // TEXT: 全文検索可能、STORED: snippet 生成・取得用
+    // TEXT: full-text searchable, STORED: for snippet generation and retrieval
     b.add_text_field("title", TEXT | STORED);
     b.add_text_field("content", TEXT | STORED);
     b.add_text_field("tags", TEXT | STORED);
     b.build()
 }
 
-// ---------- ヘルパー ----------
+// ---------- Helpers ----------
 
 fn into_search_err(e: impl std::fmt::Display) -> ScrapwellError {
     ScrapwellError::SearchIndex(e.to_string())
 }
 
-/// ドキュメントを writer に追加する（既存 ID は削除してから追加 = upsert）
+/// Add a document to the writer (delete by ID first if it exists = upsert).
 fn add_entry_doc(schema: &Schema, writer: &mut IndexWriter, entry: &MemoryEntry) -> Result<()> {
     let id_field = schema.get_field("id").unwrap();
     writer.delete_term(Term::from_field_text(id_field, &entry.id.0));
@@ -58,7 +58,7 @@ fn add_entry_doc(schema: &Schema, writer: &mut IndexWriter, entry: &MemoryEntry)
     Ok(())
 }
 
-/// Tantivy の Snippet を <<ハイライト>> 形式に変換する
+/// Convert a Tantivy Snippet into <<highlight>> format.
 fn format_snippet(snippet: &tantivy::snippet::Snippet) -> Vec<String> {
     let fragment = snippet.fragment();
     if fragment.is_empty() {
@@ -82,10 +82,11 @@ fn format_snippet(snippet: &tantivy::snippet::Snippet) -> Vec<String> {
 
 // ---------- TantivySearchIndex ----------
 
+
 pub struct TantivySearchIndex {
     schema: Schema,
     index: Index,
-    /// trait SearchIndex のシグネチャが &self のため Mutex で包む
+    /// Wrapped in Mutex because the trait SearchIndex signature uses &self.
     writer: Mutex<IndexWriter>,
     reader: IndexReader,
 }
@@ -132,11 +133,11 @@ impl SearchIndex for TantivySearchIndex {
         let content = schema.get_field("content").unwrap();
         let tags = schema.get_field("tags").unwrap();
 
-        // title・content・tags を横断するキーワード検索クエリ
+        // Keyword search query across title, content, and tags
         let parser = QueryParser::for_index(&self.index, vec![title, content, tags]);
         let kw_query = parser.parse_query(&query.query).map_err(into_search_err)?;
 
-        // entity フィルタがある場合は BooleanQuery で AND 結合
+        // If an entity filter is provided, AND it together with BooleanQuery
         let final_query: Box<dyn tantivy::query::Query> = if let Some(entity) = &query.entity {
             let entity_field = schema.get_field("entity").unwrap();
             let entity_term = Term::from_field_text(entity_field, entity);
@@ -160,7 +161,7 @@ impl SearchIndex for TantivySearchIndex {
         for (score, doc_address) in top_docs {
             let doc: TantivyDocument = searcher.doc(doc_address).map_err(into_search_err)?;
 
-            // STORED フィールドの値を文字列として取り出すクロージャ
+            // Closure to extract a STORED field value as a string
             let get_str = |field_name: &str| -> String {
                 schema
                     .get_field(field_name)
@@ -267,7 +268,7 @@ mod tests {
         let dir = TempDir::new().unwrap();
         let idx = make_index(&dir);
 
-        // デフォルトの SimpleTokenizer はスペース区切りのため ASCII テキストを使用
+        // The default SimpleTokenizer splits on whitespace, so use ASCII text
         let entry = make_entry(
             "01HZZZZ00001",
             "rust",
@@ -419,7 +420,7 @@ mod tests {
         let dir = TempDir::new().unwrap();
         let idx = make_index(&dir);
 
-        // 初期データ
+        // Initial data
         idx.upsert(&make_entry(
             "01",
             "rust",
@@ -431,7 +432,7 @@ mod tests {
         ))
         .unwrap();
 
-        // 新しいデータで rebuild
+        // Rebuild with new data
         let new_entries = vec![make_entry(
             "02",
             "rust",

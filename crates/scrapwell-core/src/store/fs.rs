@@ -60,7 +60,7 @@ impl FsMemoryStore {
     }
 }
 
-// ---------- ヘルパー関数 ----------
+// ---------- Helper functions ----------
 
 fn scope_to_str(scope: Scope) -> &'static str {
     match scope {
@@ -93,8 +93,8 @@ fn parse_datetime(s: &str) -> Result<DateTime<Utc>> {
         .map_err(|e| ScrapwellError::InvalidPath(format!("invalid datetime '{}': {}", s, e)))
 }
 
-/// Markdown ファイルに書き出す文字列を生成する。
-/// serde_yaml は末尾に \n を付けるため、区切り `---` はそのまま続く。
+/// Generate the string to write to a Markdown file.
+/// serde_yaml appends a trailing \n, so the closing `---` follows directly.
 fn render_md<T: serde::Serialize>(fm: &T, body: &str) -> Result<String> {
     let yaml = serde_yaml::to_string(fm)?;
     if body.is_empty() {
@@ -104,7 +104,7 @@ fn render_md<T: serde::Serialize>(fm: &T, body: &str) -> Result<String> {
     }
 }
 
-/// `---\n{yaml}\n---\n` 形式の frontmatter をパースして (frontmatter, body) を返す。
+/// Parse frontmatter in `---\n{yaml}\n---\n` format and return (frontmatter, body).
 fn parse_frontmatter<T: DeserializeOwned>(src: &str) -> Result<(T, String)> {
     let src = src.trim_start_matches('\n');
     let rest = src
@@ -128,11 +128,11 @@ fn map_constraint_err(e: rusqlite::Error, name: &str) -> ScrapwellError {
     ScrapwellError::Database(e)
 }
 
-// ---------- MemoryStore 実装 ----------
+// ---------- MemoryStore implementation ----------
 
 impl MemoryStore for FsMemoryStore {
     fn save_entity(&self, entity: &EntityMeta) -> Result<()> {
-        // 1. ディレクトリ + _entity.md を書き出す
+        // 1. Write the directory and _entity.md
         let entity_dir = self.root.join("entities").join(&entity.name);
         std::fs::create_dir_all(&entity_dir)?;
 
@@ -146,7 +146,7 @@ impl MemoryStore for FsMemoryStore {
         let body = entity.description.as_deref().unwrap_or("");
         std::fs::write(entity_dir.join("_entity.md"), render_md(&fm, body)?)?;
 
-        // 2. SQLite INSERT
+        // 2. SQLite INSERT — entities
         let conn = self.conn.lock().unwrap();
         conn.execute(
             "INSERT INTO entities (id, name, scope, description, tags, created_at, updated_at)
@@ -203,7 +203,7 @@ impl MemoryStore for FsMemoryStore {
     }
 
     fn save(&self, entry: &MemoryEntry) -> Result<()> {
-        // 1. entity_id を取得（別スコープでロック解放）
+        // 1. Fetch entity_id (lock released in a separate scope)
         let entity_id: String = {
             let conn = self.conn.lock().unwrap();
             conn.query_row(
@@ -219,7 +219,7 @@ impl MemoryStore for FsMemoryStore {
             })?
         };
 
-        // 2. Markdown ファイルを書き出す（ロックなし）
+        // 2. Write the Markdown file (no lock held)
         let path = MemoryPath::new(&entry.entity, entry.topic.as_deref(), &entry.name)?;
         let fs_path = path.to_fs_path(&self.root);
         if let Some(parent) = fs_path.parent() {
@@ -234,7 +234,7 @@ impl MemoryStore for FsMemoryStore {
         };
         std::fs::write(&fs_path, render_md(&fm, &entry.content)?)?;
 
-        // 3. SQLite INSERT
+        // 3. SQLite INSERT — documents
         {
             let conn = self.conn.lock().unwrap();
             conn.execute(
@@ -258,7 +258,7 @@ impl MemoryStore for FsMemoryStore {
     }
 
     fn get(&self, id: &MemoryId) -> Result<Option<MemoryEntry>> {
-        // メタデータを SQLite から取得
+        // Fetch metadata from SQLite
         let row = {
             let conn = self.conn.lock().unwrap();
             let result = conn.query_row(
@@ -288,7 +288,7 @@ impl MemoryStore for FsMemoryStore {
 
         let (doc_id, entity_name, topic, name, title, tags_json, created_str, updated_str) = row;
 
-        // Markdown ファイルから本文を読む（ロックなし）
+        // Read the body from the Markdown file (no lock held)
         let path = MemoryPath::new(&entity_name, topic.as_deref(), &name)?;
         let fs_path = path.to_fs_path(&self.root);
         let file_content = std::fs::read_to_string(&fs_path)?;
@@ -310,8 +310,8 @@ impl MemoryStore for FsMemoryStore {
     fn list_tree(&self, entity: Option<&str>, depth: u32) -> Result<TreeNode> {
         let conn = self.conn.lock().unwrap();
 
-        // (entity_name, topic_opt, count) の行を取得
-        // stmt のライフタイムを確実にブロック内で終わらせるため、変数に束縛してから返す
+        // Fetch rows of (entity_name, topic_opt, count).
+        // Bind to a variable before returning to ensure stmt's lifetime ends within the block.
         let rows: Vec<(String, Option<String>, usize)> = if let Some(entity_name) = entity {
             let mut stmt = conn.prepare(
                 "SELECT e.name, d.topic, COUNT(d.id) as cnt
@@ -351,7 +351,7 @@ impl MemoryStore for FsMemoryStore {
             result
         };
 
-        // entity_name → (total_count, topic_children)
+        // entity_name → (total_count, topic children)
         let mut entity_map: BTreeMap<String, (usize, Vec<TreeNode>)> = BTreeMap::new();
 
         for (entity_name, topic_opt, count) in rows {

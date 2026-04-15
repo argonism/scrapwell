@@ -108,7 +108,7 @@ struct DeleteMemoryParams {
     id: String,
 }
 
-// ---------- ツリー整形 ----------
+// ---------- Tree formatting ----------
 
 fn format_tree(node: &crate::model::TreeNode, is_root: bool) -> String {
     if is_root {
@@ -135,7 +135,7 @@ fn format_tree(node: &crate::model::TreeNode, is_root: bool) -> String {
     }
 }
 
-// ---------- ハンドラー ----------
+// ---------- Handler ----------
 
 pub struct ScrapwellHandler<S, I>
 where
@@ -146,9 +146,9 @@ where
     tool_router: ToolRouter<Self>,
 }
 
-// Arc<T>: Clone は T: Clone を必要としない。
-// ToolRouter<T>: Clone も T: Clone を必要としない（手動実装のため）。
-// FsMemoryStore は Clone でないため #[derive(Clone)] は使えない。
+// Arc<T>: Clone does not require T: Clone.
+// ToolRouter<T>: Clone also does not require T: Clone (manually implemented).
+// FsMemoryStore is not Clone, so #[derive(Clone)] cannot be used.
 impl<S, I> Clone for ScrapwellHandler<S, I>
 where
     S: MemoryStore + 'static,
@@ -388,7 +388,7 @@ mod tests {
     use super::ScrapwellHandler;
     use crate::{index::noop::NoopSearchIndex, service::MemoryService, store::fs::FsMemoryStore};
 
-    // ---------- テスト用クライアント ----------
+    // ---------- Test client ----------
 
     #[derive(Debug, Clone, Default)]
     struct DummyClient;
@@ -399,9 +399,9 @@ mod tests {
         }
     }
 
-    // ---------- ヘルパー ----------
+    // ---------- Helpers ----------
 
-    /// レスポンスの最初のテキストコンテンツを取り出す
+    /// Extract the first text content from a tool result.
     fn text_of(result: &CallToolResult) -> String {
         result
             .content
@@ -411,8 +411,8 @@ mod tests {
             .expect("expected text content in result")
     }
 
-    /// インメモリトランスポートでサーバーを起動し、テスト用クライアントを返す。
-    /// TempDir は呼び出し元が保持して生存期間を管理する。
+    /// Start the server with an in-memory transport and return a test client.
+    /// The caller must hold the TempDir to manage its lifetime.
     macro_rules! start {
         ($dir:expr) => {{
             let store = FsMemoryStore::new($dir.path().to_path_buf())?;
@@ -426,9 +426,9 @@ mod tests {
         }};
     }
 
-    /// RunningService は Deref<Target = Peer<RoleClient>> を実装しており、
-    /// call_tool は Peer<RoleClient> のメソッド。
-    /// このマクロで client.call_tool() を簡潔に呼ぶ。
+    /// RunningService implements Deref<Target = Peer<RoleClient>>,
+    /// and call_tool is a method on Peer<RoleClient>.
+    /// This macro calls client.call_tool() concisely.
     macro_rules! tool {
         ($client:expr, $name:expr, $args:expr) => {
             $client
@@ -502,7 +502,7 @@ mod tests {
                 "entity": "rust",
                 "name": "anyhow-guide",
                 "title": "Anyhow Guide",
-                "content": "anyhow の使い方"
+                "content": "how to use anyhow"
             })
         );
 
@@ -557,7 +557,7 @@ mod tests {
                 "entity": "rust",
                 "name": "tokio-guide",
                 "title": "Tokio Guide",
-                "content": "tokio の非同期ランタイムについて",
+                "content": "about tokio async runtime",
                 "topic": "async"
             })
         );
@@ -574,7 +574,7 @@ mod tests {
         assert!(entry["content"]
             .as_str()
             .unwrap()
-            .contains("非同期ランタイム"));
+            .contains("tokio async runtime"));
 
         client.cancel().await?;
         Ok(())

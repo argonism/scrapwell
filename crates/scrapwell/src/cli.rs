@@ -10,24 +10,24 @@ use scrapwell_core::{
     ScrapwellError,
 };
 
-// ---------- コマンド定義 ----------
+// ---------- Command definitions ----------
 
 #[derive(Subcommand)]
 pub enum Commands {
-    /// MCPサーバーとして起動する (stdio transport)
+    /// Start as an MCP server (stdio transport)
     Serve,
-    /// 全文検索インデックスを再構築する
+    /// Rebuild the full-text search index
     Rebuild {
-        /// 再構築対象: all | metadata | search
+        /// Rebuild target: all | metadata | search
         #[arg(long, default_value = "all")]
         target: String,
     },
-    /// Entity の管理
+    /// Manage Entities
     Entity {
         #[command(subcommand)]
         cmd: EntityCmd,
     },
-    /// ドキュメント（メモリ）の管理
+    /// Manage documents (memories)
     Memory {
         #[command(subcommand)]
         cmd: MemoryCmd,
@@ -36,31 +36,31 @@ pub enum Commands {
 
 #[derive(Subcommand)]
 pub enum EntityCmd {
-    /// Entity 一覧を表示する
+    /// List all Entities
     List {
-        /// JSON 形式で出力する
+        /// Output in JSON format
         #[arg(long)]
         json: bool,
     },
-    /// 新しい Entity を作成する
+    /// Create a new Entity
     Create {
-        /// Entity 名 (kebab-case, ASCII 英数字・ハイフンのみ)
+        /// Entity name (kebab-case, ASCII alphanumeric and hyphens only)
         name: String,
-        /// スコープ: knowledge (汎用) | project (プロジェクト固有)
+        /// Scope: knowledge (general) | project (project-specific)
         #[arg(long, default_value = "knowledge")]
         scope: String,
-        /// 説明
+        /// Description
         #[arg(long)]
         desc: Option<String>,
-        /// タグ (--tag foo --tag bar のように複数指定可)
+        /// Tags (can be specified multiple times: --tag foo --tag bar)
         #[arg(long = "tag")]
         tags: Vec<String>,
     },
-    /// Entity を削除する (配下のドキュメントもすべて削除される)
+    /// Delete an Entity (all documents under it are also deleted)
     Delete {
         /// Entity ID (ULID)
         id: String,
-        /// 確認プロンプトをスキップする
+        /// Skip confirmation prompt
         #[arg(long)]
         yes: bool,
     },
@@ -68,66 +68,66 @@ pub enum EntityCmd {
 
 #[derive(Subcommand)]
 pub enum MemoryCmd {
-    /// ドキュメント一覧をツリー形式で表示する
+    /// List documents in tree format
     List {
-        /// 特定 Entity に絞り込む
+        /// Filter to a specific Entity
         #[arg(long)]
         entity: Option<String>,
-        /// JSON 形式で出力する
+        /// Output in JSON format
         #[arg(long)]
         json: bool,
     },
-    /// キーワードで全文検索する
+    /// Full-text search by keyword
     Search {
-        /// 検索クエリ
+        /// Search query
         query: String,
-        /// 特定 Entity に絞り込む
+        /// Filter to a specific Entity
         #[arg(long)]
         entity: Option<String>,
-        /// 最大取得件数
+        /// Maximum number of results
         #[arg(long, default_value = "10")]
         limit: usize,
-        /// JSON 形式で出力する
+        /// Output in JSON format
         #[arg(long)]
         json: bool,
     },
-    /// ドキュメントの全内容を取得する
+    /// Fetch the full content of a document
     Get {
-        /// ドキュメント ID (ULID)
+        /// Document ID (ULID)
         id: String,
-        /// JSON 形式で出力する
+        /// Output in JSON format
         #[arg(long)]
         json: bool,
     },
-    /// ドキュメントを保存する (本文は --content / --file / stdin のいずれかで指定)
+    /// Save a document (body provided via --content, --file, or stdin)
     Save {
-        /// 保存先 Entity 名
+        /// Target Entity name
         #[arg(long)]
         entity: String,
-        /// ファイル名 (vault 全体でユニーク, kebab-case)
+        /// Filename (unique across the vault, kebab-case)
         #[arg(long)]
         name: String,
-        /// ドキュメントのタイトル
+        /// Document title
         #[arg(long)]
         title: String,
-        /// 本文文字列 (--file / stdin と排他)
+        /// Body string (mutually exclusive with --file / stdin)
         #[arg(long, conflicts_with = "file")]
         content: Option<String>,
-        /// 本文を読み込むファイルパス (--content / stdin と排他)
+        /// File path to read body from (mutually exclusive with --content / stdin)
         #[arg(long, conflicts_with = "content")]
         file: Option<PathBuf>,
-        /// Topic 名 (任意)
+        /// Topic name (optional)
         #[arg(long)]
         topic: Option<String>,
-        /// タグ (--tag foo --tag bar のように複数指定可)
+        /// Tags (can be specified multiple times: --tag foo --tag bar)
         #[arg(long = "tag")]
         tags: Vec<String>,
     },
-    /// ドキュメントを削除する
+    /// Delete a document
     Delete {
-        /// ドキュメント ID (ULID)
+        /// Document ID (ULID)
         id: String,
-        /// 確認プロンプトをスキップする
+        /// Skip confirmation prompt
         #[arg(long)]
         yes: bool,
     },
@@ -272,7 +272,7 @@ pub fn run_memory<S: MemoryStore, I: SearchIndex>(
     Ok(())
 }
 
-// ---------- ヘルパー ----------
+// ---------- Helpers ----------
 
 fn parse_scope(s: &str) -> Result<Scope> {
     match s {

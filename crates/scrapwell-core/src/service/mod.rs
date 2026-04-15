@@ -31,7 +31,7 @@ impl<S: MemoryStore, I: SearchIndex> MemoryService<S, I> {
         description: Option<String>,
         tags: Vec<String>,
     ) -> Result<MemoryId> {
-        // 類似名チェック
+        // Similar-name check
         let existing = self.store.list_entity_names()?;
         let similar: Vec<String> = existing
             .iter()
@@ -87,12 +87,12 @@ impl<S: MemoryStore, I: SearchIndex> MemoryService<S, I> {
         topic: Option<String>,
         tags: Vec<String>,
     ) -> Result<MemoryId> {
-        // Entity が存在するか確認
+        // Verify the Entity exists
         self.store
             .get_entity_by_name(&entity_name)?
             .ok_or_else(|| ScrapwellError::NotFound(format!("entity '{}'", entity_name)))?;
 
-        // ファイル名がvault全体で一意か確認
+        // Verify the filename is unique across the vault
         if !self.store.check_name_unique(&name)? {
             return Err(ScrapwellError::DuplicateName(name));
         }
@@ -130,7 +130,7 @@ impl<S: MemoryStore, I: SearchIndex> MemoryService<S, I> {
             tags,
         };
         self.store.update(&memory_id, &patch)?;
-        // 更新後のエントリで検索インデックスを再構築（Phase 3 で Tantivy に差し替え）
+        // Re-index with the updated entry
         if let Some(entry) = self.store.get(&memory_id)? {
             self.index.upsert(&entry)?;
         }
@@ -190,7 +190,7 @@ mod tests {
     use crate::{error::ScrapwellError, index::noop::NoopSearchIndex, store::fs::FsMemoryStore};
     use tempfile::TempDir;
 
-    // ---------- ヘルパー ----------
+    // ---------- Helpers ----------
 
     fn make_service() -> (MemoryService<FsMemoryStore, NoopSearchIndex>, TempDir) {
         let dir = TempDir::new().unwrap();
@@ -199,7 +199,7 @@ mod tests {
         (service, dir)
     }
 
-    // ---------- Phase 1: ハッピーパス ----------
+    // ---------- Phase 1: Happy path ----------
 
     #[test]
     fn create_entity_save_memory_and_get_roundtrip() {
@@ -240,7 +240,7 @@ mod tests {
         assert!(result.is_none());
     }
 
-    // ---------- Phase 1: エラーケース ----------
+    // ---------- Phase 1: Error cases ----------
 
     #[test]
     fn save_memory_without_entity_fails() {
@@ -290,7 +290,7 @@ mod tests {
         assert!(matches!(err, ScrapwellError::DuplicateName(_)));
     }
 
-    // ---------- Phase 1: vault 全体の一意性 ----------
+    // ---------- Phase 1: Vault-wide uniqueness ----------
 
     #[test]
     fn vault_wide_name_uniqueness_across_entities() {
@@ -329,6 +329,7 @@ mod tests {
     }
 
     // ---------- Phase 1: list_memories ----------
+
 
     #[test]
     fn list_memories_reflects_structure() {
@@ -384,7 +385,7 @@ mod tests {
         assert_eq!(es.children[0].name, "mapping");
     }
 
-    // ---------- Phase 2: 類似名チェック ----------
+    // ---------- Phase 2: Similar-name check ----------
 
     #[test]
     fn similar_entity_name_is_rejected() {
@@ -393,7 +394,7 @@ mod tests {
         svc.create_entity("elasticsearch".to_string(), Scope::Knowledge, None, vec![])
             .unwrap();
 
-        // "elastic-search" は "elasticsearch" と類似度 > 0.85 のためエラー
+        // "elastic-search" has similarity > 0.85 with "elasticsearch" → rejected
         let err = svc
             .create_entity("elastic-search".to_string(), Scope::Knowledge, None, vec![])
             .unwrap_err();
@@ -414,12 +415,13 @@ mod tests {
         svc.create_entity("rust".to_string(), Scope::Knowledge, None, vec![])
             .unwrap();
 
-        // "redis" は "rust" と類似度 < 0.85 のため通過
+        // "redis" has similarity < 0.85 with "rust" → accepted
         svc.create_entity("redis".to_string(), Scope::Knowledge, None, vec![])
             .unwrap();
     }
 
     // ---------- Phase 2: update_entity ----------
+
 
     #[test]
     fn update_entity_persists_changes() {
@@ -433,7 +435,7 @@ mod tests {
         )
         .unwrap();
 
-        // entity_id を取得
+        // Retrieve entity_id
         let entity = svc
             .store
             .get_entity_by_name("elasticsearch")
@@ -460,6 +462,7 @@ mod tests {
 
     // ---------- Phase 2: delete_entity ----------
 
+
     #[test]
     fn delete_entity_cascades_to_documents() {
         let (svc, _dir) = make_service();
@@ -480,12 +483,13 @@ mod tests {
         let entity = svc.store.get_entity_by_name("rust").unwrap().unwrap();
         svc.delete_entity(entity.id.0.clone()).unwrap();
 
-        // Entity も document も消えている
+        // Both Entity and document are gone
         assert!(svc.store.get_entity_by_name("rust").unwrap().is_none());
         assert!(svc.get_memory(&doc_id).unwrap().is_none());
     }
 
     // ---------- Phase 2: update_memory ----------
+
 
     #[test]
     fn update_memory_persists_changes() {
@@ -519,6 +523,7 @@ mod tests {
     }
 
     // ---------- Phase 4: rebuild_index ----------
+
 
     #[test]
     fn rebuild_index_returns_document_count() {
@@ -560,6 +565,7 @@ mod tests {
     }
 
     // ---------- Phase 2: delete_memory ----------
+
 
     #[test]
     fn delete_memory_removes_document() {
