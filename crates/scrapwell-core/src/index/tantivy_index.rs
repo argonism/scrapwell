@@ -82,7 +82,6 @@ fn format_snippet(snippet: &tantivy::snippet::Snippet) -> Vec<String> {
 
 // ---------- TantivySearchIndex ----------
 
-
 pub struct TantivySearchIndex {
     schema: Schema,
     index: Index,

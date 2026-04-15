@@ -330,7 +330,6 @@ mod tests {
 
     // ---------- Phase 1: list_memories ----------
 
-
     #[test]
     fn list_memories_reflects_structure() {
         let (svc, _dir) = make_service();
@@ -422,7 +421,6 @@ mod tests {
 
     // ---------- Phase 2: update_entity ----------
 
-
     #[test]
     fn update_entity_persists_changes() {
         let (svc, _dir) = make_service();
@@ -462,7 +460,6 @@ mod tests {
 
     // ---------- Phase 2: delete_entity ----------
 
-
     #[test]
     fn delete_entity_cascades_to_documents() {
         let (svc, _dir) = make_service();
@@ -489,7 +486,6 @@ mod tests {
     }
 
     // ---------- Phase 2: update_memory ----------
-
 
     #[test]
     fn update_memory_persists_changes() {
@@ -523,7 +519,6 @@ mod tests {
     }
 
     // ---------- Phase 4: rebuild_index ----------
-
 
     #[test]
     fn rebuild_index_returns_document_count() {
@@ -565,7 +560,6 @@ mod tests {
     }
 
     // ---------- Phase 2: delete_memory ----------
-
 
     #[test]
     fn delete_memory_removes_document() {
