@@ -255,6 +255,9 @@ where
         [Before saving]\n\
         1. Call list_memories to check the existing Entity/Topic structure.\n\
         2. If the target Entity does not exist, create it first with create_entity.\n\
+        [Linking]\n\
+        Before writing the content, use search_memory to find related documents.\n\
+        Add [[wikilink]] references to relevant documents you find. Organic cross-linking makes the knowledge base more useful.\n\
         [Topics]\n\
         Only use a topic when the Entity has ~7+ documents and a clear sub-theme boundary exists.\n\
         If only 1-2 documents would go under a topic, place them directly under the Entity instead.\n\
