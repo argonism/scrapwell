@@ -1,0 +1,112 @@
+#!/bin/sh
+# scrapwell installer
+# Usage: curl --proto '=https' --tlsv1.2 -LsSf \
+#   https://github.com/argonism/scrapwell/releases/latest/download/scrapwell-installer.sh | sh
+
+set -eu
+
+BINARY_NAME="scrapwell"
+REPO="argonism/scrapwell"
+VERSION="{{VERSION}}"
+TAG="v${VERSION}"
+
+# ---------- OS / arch detection ----------
+
+detect_target() {
+    os="$(uname -s)"
+    arch="$(uname -m)"
+
+    case "$os" in
+        Linux)
+            case "$arch" in
+                x86_64)        echo "x86_64-unknown-linux-gnu" ;;
+                aarch64|arm64) echo "aarch64-unknown-linux-gnu" ;;
+                *) echo "Unsupported architecture: $arch" >&2; exit 1 ;;
+            esac
+            ;;
+        Darwin)
+            case "$arch" in
+                x86_64) echo "x86_64-apple-darwin" ;;
+                arm64)  echo "aarch64-apple-darwin" ;;
+                *) echo "Unsupported architecture: $arch" >&2; exit 1 ;;
+            esac
+            ;;
+        *)
+            echo "Unsupported OS: $os" >&2
+            echo "For Windows, download from: https://github.com/${REPO}/releases" >&2
+            exit 1
+            ;;
+    esac
+}
+
+# ---------- install dir ----------
+
+install_dir() {
+    if [ -n "${CARGO_HOME:-}" ]; then
+        echo "${CARGO_HOME}/bin"
+    else
+        echo "${HOME}/.cargo/bin"
+    fi
+}
+
+# ---------- sha256 ----------
+
+sha256_file() {
+    if command -v sha256sum > /dev/null 2>&1; then
+        sha256sum "$1" | cut -d' ' -f1
+    elif command -v shasum > /dev/null 2>&1; then
+        shasum -a 256 "$1" | cut -d' ' -f1
+    else
+        echo "sha256sum or shasum is required" >&2
+        exit 1
+    fi
+}
+
+# ---------- main ----------
+
+main() {
+    TARGET="$(detect_target)"
+    INSTALL_DIR="$(install_dir)"
+    ARCHIVE="${BINARY_NAME}-${TAG}-${TARGET}.tar.gz"
+    BASE_URL="https://github.com/${REPO}/releases/download/${TAG}"
+    DOWNLOAD_URL="${BASE_URL}/${ARCHIVE}"
+    SHA256_URL="${DOWNLOAD_URL}.sha256"
+
+    echo "Installing ${BINARY_NAME} ${TAG} for ${TARGET}..."
+
+    if ! command -v curl > /dev/null 2>&1; then
+        echo "curl is required" >&2
+        exit 1
+    fi
+
+    TMPDIR="$(mktemp -d)"
+    trap 'rm -rf "$TMPDIR"' EXIT
+
+    echo "Downloading ${DOWNLOAD_URL} ..."
+    curl --proto '=https' --tlsv1.2 -fLo "${TMPDIR}/${ARCHIVE}" "${DOWNLOAD_URL}"
+
+    echo "Verifying checksum ..."
+    curl --proto '=https' --tlsv1.2 -fLo "${TMPDIR}/${ARCHIVE}.sha256" "${SHA256_URL}"
+    EXPECTED="$(cut -d' ' -f1 "${TMPDIR}/${ARCHIVE}.sha256")"
+    ACTUAL="$(sha256_file "${TMPDIR}/${ARCHIVE}")"
+    if [ "$EXPECTED" != "$ACTUAL" ]; then
+        echo "Checksum mismatch! Expected: $EXPECTED  Got: $ACTUAL" >&2
+        exit 1
+    fi
+
+    tar -xzf "${TMPDIR}/${ARCHIVE}" -C "${TMPDIR}"
+    mkdir -p "${INSTALL_DIR}"
+    install -m 755 "${TMPDIR}/${BINARY_NAME}-${TAG}-${TARGET}/${BINARY_NAME}" "${INSTALL_DIR}/${BINARY_NAME}"
+
+    echo ""
+    echo "${BINARY_NAME} ${TAG} installed to ${INSTALL_DIR}/${BINARY_NAME}"
+
+    if ! command -v "${BINARY_NAME}" > /dev/null 2>&1; then
+        echo ""
+        echo "Note: ${INSTALL_DIR} is not in your PATH."
+        echo "Add the following to your shell profile:"
+        echo "  export PATH=\"\${HOME}/.cargo/bin:\$PATH\""
+    fi
+}
+
+main "$@"
