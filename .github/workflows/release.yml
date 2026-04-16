@@ -31,9 +31,6 @@ jobs:
           - target: x86_64-unknown-linux-gnu
             runner: ubuntu-22.04
             archive_ext: tar.gz
-          - target: x86_64-pc-windows-msvc
-            runner: windows-2022
-            archive_ext: zip
 
     runs-on: ${{ matrix.runner }}
 
@@ -78,20 +75,6 @@ jobs:
           else
             shasum -a 256 "${ARCHIVE_NAME}.tar.gz" > "${ARCHIVE_NAME}.tar.gz.sha256"
           fi
-
-      - name: Package (Windows)
-        if: ${{ matrix.archive_ext == 'zip' }}
-        shell: pwsh
-        run: |
-          $Tag = "${{ github.ref_name }}"
-          $Target = "${{ matrix.target }}"
-          $ArchiveName = "scrapwell-${Tag}-${Target}"
-          New-Item -ItemType Directory -Path "dist/$ArchiveName" | Out-Null
-          Copy-Item "target/$Target/dist/scrapwell.exe" "dist/$ArchiveName/"
-          Copy-Item LICENSE, README.md "dist/$ArchiveName/"
-          Compress-Archive -Path "dist/$ArchiveName" -DestinationPath "dist/$ArchiveName.zip"
-          $Hash = (Get-FileHash "dist/$ArchiveName.zip" -Algorithm SHA256).Hash.ToLower()
-          "$Hash  $ArchiveName.zip" | Out-File -FilePath "dist/$ArchiveName.zip.sha256" -Encoding ascii
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -156,7 +139,6 @@ jobs:
             --title "scrapwell $TAG" \
             --generate-notes \
             artifacts/*.tar.gz \
-            artifacts/*.zip \
             "artifacts/scrapwell-${TAG}-SHA256SUMS" \
             artifacts/scrapwell-installer.sh
 
