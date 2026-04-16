@@ -85,8 +85,10 @@ fn format_snippet(snippet: &tantivy::snippet::Snippet) -> Vec<String> {
 pub struct TantivySearchIndex {
     schema: Schema,
     index: Index,
-    /// Wrapped in Mutex because the trait SearchIndex signature uses &self.
-    writer: Mutex<IndexWriter>,
+    /// Writer is created lazily on first write so read-only callers (e.g. CLI
+    /// search) do not acquire the lockfile and can coexist with a running MCP
+    /// server process.
+    writer: Mutex<Option<IndexWriter>>,
     reader: IndexReader,
 }
 
@@ -97,7 +99,6 @@ impl TantivySearchIndex {
         let schema = build_schema();
         let dir = MmapDirectory::open(&index_dir).map_err(into_search_err)?;
         let index = Index::open_or_create(dir, schema.clone()).map_err(into_search_err)?;
-        let writer = index.writer(50_000_000).map_err(into_search_err)?;
         let reader = index
             .reader_builder()
             .reload_policy(ReloadPolicy::OnCommitWithDelay)
@@ -107,19 +108,30 @@ impl TantivySearchIndex {
         Ok(Self {
             schema,
             index,
-            writer: Mutex::new(writer),
+            writer: Mutex::new(None),
             reader,
         })
+    }
+
+    /// Acquire the writer, creating it on first call.
+    fn with_writer<F, T>(&self, f: F) -> Result<T>
+    where
+        F: FnOnce(&mut IndexWriter) -> Result<T>,
+    {
+        let mut guard = self.writer.lock().unwrap();
+        if guard.is_none() {
+            *guard = Some(self.index.writer(50_000_000).map_err(into_search_err)?);
+        }
+        f(guard.as_mut().unwrap())
     }
 }
 
 impl SearchIndex for TantivySearchIndex {
     fn upsert(&self, entry: &MemoryEntry) -> Result<()> {
-        {
-            let mut w = self.writer.lock().unwrap();
-            add_entry_doc(&self.schema, &mut w, entry)?;
-            w.commit().map_err(into_search_err)?;
-        }
+        self.with_writer(|w| {
+            add_entry_doc(&self.schema, w, entry)?;
+            w.commit().map_err(into_search_err)
+        })?;
         self.reader.reload().map_err(into_search_err)?;
         Ok(())
     }
@@ -204,25 +216,23 @@ impl SearchIndex for TantivySearchIndex {
     }
 
     fn remove(&self, id: &MemoryId) -> Result<()> {
-        {
-            let mut w = self.writer.lock().unwrap();
+        self.with_writer(|w| {
             let id_field = self.schema.get_field("id").unwrap();
             w.delete_term(Term::from_field_text(id_field, &id.0));
-            w.commit().map_err(into_search_err)?;
-        }
+            w.commit().map_err(into_search_err)
+        })?;
         self.reader.reload().map_err(into_search_err)?;
         Ok(())
     }
 
     fn rebuild(&self, entries: &mut dyn Iterator<Item = MemoryEntry>) -> Result<()> {
-        {
-            let mut w = self.writer.lock().unwrap();
+        self.with_writer(|w| {
             w.delete_all_documents().map_err(into_search_err)?;
             for entry in entries {
-                add_entry_doc(&self.schema, &mut w, &entry)?;
+                add_entry_doc(&self.schema, w, &entry)?;
             }
-            w.commit().map_err(into_search_err)?;
-        }
+            w.commit().map_err(into_search_err)
+        })?;
         self.reader.reload().map_err(into_search_err)?;
         Ok(())
     }
