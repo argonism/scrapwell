@@ -32,6 +32,20 @@ pub enum Commands {
         #[command(subcommand)]
         cmd: MemoryCmd,
     },
+    /// Full-text search across all memories
+    Search {
+        /// Search query
+        query: String,
+        /// Filter to a specific Entity
+        #[arg(long)]
+        entity: Option<String>,
+        /// Maximum number of results
+        #[arg(long, default_value = "10")]
+        limit: usize,
+        /// Output in JSON format
+        #[arg(long)]
+        json: bool,
+    },
 }
 
 #[derive(Subcommand)]

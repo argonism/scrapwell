@@ -122,6 +122,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         cli::Commands::Memory { cmd } => {
             cli::run_memory(cmd, service)?;
         }
+        cli::Commands::Search {
+            query,
+            entity,
+            limit,
+            json,
+        } => {
+            cli::run_memory(
+                cli::MemoryCmd::Search {
+                    query,
+                    entity,
+                    limit,
+                    json,
+                },
+                service,
+            )?;
+        }
     }
 
     Ok(())
