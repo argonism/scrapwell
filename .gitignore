@@ -34,3 +34,10 @@ Cargo.lock
 
 # Local project config (contains personal paths)
 .scrapwell.toml
+
+# Zola build output
+site/public/
+
+# Playwright screenshots
+.playwright-mcp/
+site-*.png

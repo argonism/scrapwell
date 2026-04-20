@@ -1,4 +1,0 @@
-User-agent: *
-Allow: /
-
-Sitemap: https://argonism.github.io/scrapwell/sitemap.xml
