@@ -1,4 +1,4 @@
-use std::{path::PathBuf, sync::Mutex};
+use std::path::PathBuf;
 
 use tantivy::{
     collector::TopDocs,
@@ -85,10 +85,6 @@ fn format_snippet(snippet: &tantivy::snippet::Snippet) -> Vec<String> {
 pub struct TantivySearchIndex {
     schema: Schema,
     index: Index,
-    /// Writer is created lazily on first write so read-only callers (e.g. CLI
-    /// search) do not acquire the lockfile and can coexist with a running MCP
-    /// server process.
-    writer: Mutex<Option<IndexWriter>>,
     reader: IndexReader,
 }
 
@@ -108,21 +104,23 @@ impl TantivySearchIndex {
         Ok(Self {
             schema,
             index,
-            writer: Mutex::new(None),
             reader,
         })
     }
 
-    /// Acquire the writer, creating it on first call.
+    /// Acquire a short-lived writer, run the closure, then drop the writer to
+    /// release the Tantivy lockfile. This allows multiple scrapwell processes
+    /// to coexist — each holds the lock only for the duration of a single
+    /// write operation.
     fn with_writer<F, T>(&self, f: F) -> Result<T>
     where
         F: FnOnce(&mut IndexWriter) -> Result<T>,
     {
-        let mut guard = self.writer.lock().unwrap();
-        if guard.is_none() {
-            *guard = Some(self.index.writer(50_000_000).map_err(into_search_err)?);
-        }
-        f(guard.as_mut().unwrap())
+        let mut writer = self.index.writer(50_000_000).map_err(into_search_err)?;
+        let result = f(&mut writer);
+        // Drop the writer to release the lockfile regardless of success/failure.
+        drop(writer);
+        result
     }
 }
 
@@ -473,6 +471,99 @@ mod tests {
             "old documents should be gone after rebuild"
         );
         assert_eq!(new_hits.len(), 1);
+    }
+
+    #[test]
+    fn two_instances_can_coexist_on_same_directory() {
+        let dir = TempDir::new().unwrap();
+        let idx1 = make_index(&dir);
+        let idx2 = make_index(&dir);
+
+        // Instance 1 writes a document
+        idx1.upsert(&make_entry(
+            "01",
+            "rust",
+            None,
+            "from-idx1",
+            "Written by idx1",
+            "hello from the first instance",
+            vec![],
+        ))
+        .unwrap();
+
+        // Instance 2 can also write without LockBusy error
+        idx2.upsert(&make_entry(
+            "02",
+            "go",
+            None,
+            "from-idx2",
+            "Written by idx2",
+            "hello from the second instance",
+            vec![],
+        ))
+        .unwrap();
+
+        // Reload readers to pick up cross-instance commits
+        idx1.reader.reload().unwrap();
+        idx2.reader.reload().unwrap();
+
+        // Both instances can search and see all documents
+        let hits1 = idx1
+            .search(&SearchQuery {
+                query: "hello".to_string(),
+                entity: None,
+                limit: 10,
+            })
+            .unwrap();
+        let hits2 = idx2
+            .search(&SearchQuery {
+                query: "hello".to_string(),
+                entity: None,
+                limit: 10,
+            })
+            .unwrap();
+
+        assert_eq!(hits1.len(), 2, "idx1 should see both documents");
+        assert_eq!(hits2.len(), 2, "idx2 should see both documents");
+    }
+
+    #[test]
+    fn two_instances_sequential_writes_are_consistent() {
+        let dir = TempDir::new().unwrap();
+        let idx1 = make_index(&dir);
+        let idx2 = make_index(&dir);
+
+        // Alternating writes between instances
+        idx1.upsert(&make_entry(
+            "01", "rust", None, "doc-a", "A", "alpha content", vec![],
+        ))
+        .unwrap();
+        idx2.upsert(&make_entry(
+            "02", "rust", None, "doc-b", "B", "beta content", vec![],
+        ))
+        .unwrap();
+        idx1.upsert(&make_entry(
+            "03", "rust", None, "doc-c", "C", "gamma content", vec![],
+        ))
+        .unwrap();
+
+        // Remove via a different instance than the one that wrote
+        idx2.remove(&MemoryId("01".to_string())).unwrap();
+
+        // Reload reader to pick up cross-instance changes
+        idx1.reader.reload().unwrap();
+
+        let hits = idx1
+            .search(&SearchQuery {
+                query: "content".to_string(),
+                entity: None,
+                limit: 10,
+            })
+            .unwrap();
+
+        assert_eq!(hits.len(), 2, "should have 2 docs after removal");
+        let ids: Vec<&str> = hits.iter().map(|h| h.id.0.as_str()).collect();
+        assert!(!ids.contains(&"01"), "removed doc should be gone");
     }
 
     #[test]
