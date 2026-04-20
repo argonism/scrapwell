@@ -535,15 +535,33 @@ mod tests {
 
         // Alternating writes between instances
         idx1.upsert(&make_entry(
-            "01", "rust", None, "doc-a", "A", "alpha content", vec![],
+            "01",
+            "rust",
+            None,
+            "doc-a",
+            "A",
+            "alpha content",
+            vec![],
         ))
         .unwrap();
         idx2.upsert(&make_entry(
-            "02", "rust", None, "doc-b", "B", "beta content", vec![],
+            "02",
+            "rust",
+            None,
+            "doc-b",
+            "B",
+            "beta content",
+            vec![],
         ))
         .unwrap();
         idx1.upsert(&make_entry(
-            "03", "rust", None, "doc-c", "C", "gamma content", vec![],
+            "03",
+            "rust",
+            None,
+            "doc-c",
+            "C",
+            "gamma content",
+            vec![],
         ))
         .unwrap();
 
