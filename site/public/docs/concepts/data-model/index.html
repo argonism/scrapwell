@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="x-ua-compatible" content="ie=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+  <link rel="preload" as="font" href="https://argonism.github.io/scrapwell/fonts/vendor/jost/jost-v4-latin-regular.woff2" type="font/woff2" crossorigin>
+  <link rel="preload" as="font" href="https://argonism.github.io/scrapwell/fonts/vendor/jost/jost-v4-latin-700.woff2"  type="font/woff2" crossorigin>
+
+
+<link rel="stylesheet" href="https://argonism.github.io/scrapwell/main.css">
+
+
+
+  
+  
+    
+  
+
+  
+  
+    
+    
+  
+  
+  
+    
+  
+  
+  
+  
+    
+  
+  
+  
+
+
+  <meta name="robots" content="index, follow">
+  <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
+  <meta name="bingbot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
+
+
+	
+
+
+	
+
+<title>Data Model | scrapwell</title>
+<meta name="description" content="How knowledge is organized in scrapwell: Entity, Topic, and Document.">
+<link rel="canonical" href="https://argonism.github.io/scrapwell/docs/concepts/data-model/">
+
+
+
+
+
+
+  
+
+
+
+
+
+<script type="application/ld+json">
+  {
+    "@context": "http://schema.org",
+    "@type": "BreadcrumbList",
+    
+      
+      
+        
+        
+        
+        
+        
+        
+        
+        
+          {
+            "@type": "ListItem",
+            "position":  1 ,
+            "name": "Home",
+            "item": "https://argonism.github.io/scrapwell/"
+          },
+          
+          
+          {
+            "@type": "ListItem",
+            "position":  2 ,
+            "name": "Docs",
+            "item": "https://argonism.github.io/scrapwell/docs/"
+          },
+        
+      
+        
+        
+        
+        
+        
+        
+        
+        
+          
+          
+          {
+            "@type": "ListItem",
+            "position":  3 ,
+            "name": "Concepts",
+            "item": "https://argonism.github.io/scrapwell/docs/concepts/"
+          },
+        
+      
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+          
+          
+          {
+            "@type": "ListItem",
+            "position":  4 ,
+            "name": "Data Model",
+            "item": "https://argonism.github.io/scrapwell/docs/concepts/data-model/"
+          },
+        
+      
+    
+  }
+</script>
+
+
+
+
+
+
+  <meta name="theme-color" content="#fff">
+  <link rel="apple-touch-icon" sizes="180x180" href="https://argonism.github.io/scrapwell/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="https://argonism.github.io/scrapwell/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="https://argonism.github.io/scrapwell/favicon-16x16.png">
+  
+    <link rel="manifest" href="https://argonism.github.io/scrapwell/site.webmanifest" crossorigin>
+  
+
+
+  
+
+</head>
+
+  
+
+<body class="docs single">
+  
+  
+  
+  
+<div class="header-bar fixed-top"></div>
+<header class="navbar fixed-top navbar-expand-md navbar-light">
+	<div class="container">
+		<input class="menu-btn order-0" type="checkbox" id="menu-btn">
+		<label class="menu-icon d-md-none" for="menu-btn"><span class="navicon"></span></label>
+		<a class="navbar-brand order-1 order-md-0 me-auto" href="https://argonism.github.io/scrapwell">scrapwell</a>
+		<button id="mode" class="btn btn-link order-2 order-md-4" type="button" aria-label="Toggle mode">
+			<span class="toggle-dark"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-moon"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg></span>
+			<span class="toggle-light"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-sun"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg></span>
+		</button>
+		<ul class="navbar-nav fork-me order-3 order-md-5">
+			
+				
+					<li class="nav-item">
+						<a class="nav-link" href="https://github.com/argonism/scrapwell"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-github"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg><span class="ms-2 visually-hidden">GitHub</span></a>
+					</li>
+				
+			
+		</ul>
+		<div class="collapse navbar-collapse order-4 order-md-1">
+			<ul class="navbar-nav main-nav me-auto order-5 order-md-2">
+				
+					
+				
+				
+				
+					
+						<li class="nav-item docs active">
+							<a class="nav-link" href="https://argonism.github.io/scrapwell/docs/getting-started/installation/">Docs</a>
+						</li>
+					
+						<li class="nav-item">
+							<a class="nav-link" href="https://argonism.github.io/scrapwell/https://github.com/argonism/scrapwell/">GitHub</a>
+						</li>
+					
+				
+			</ul>
+			<div class="break order-6 d-md-none"></div>
+			
+				<form class="navbar-form flex-grow-1 order-7 order-md-3">
+					<input id="userinput" class="form-control is-search" type="search" placeholder="Search docs..."
+						aria-label="Search docs..." autocomplete="off">
+					<div id="suggestions" class="shadow bg-white rounded"></div>
+				</form>
+			
+		</div>
+	</div>
+</header>
+
+
+
+  
+<div class="wrap container" role="document">
+  <div class="content">
+    <div class="row flex-xl-nowrap">
+	  
+<div class="col-lg-5 col-xl-4 docs-sidebar">
+	<nav class="docs-links" aria-label="Main navigation">
+			
+			
+			
+			
+					
+					
+					
+							<h3>Getting Started</h3>
+							<ul class="list-unstyled">
+							                           
+									<li><a class="docs-link" href="https://argonism.github.io/scrapwell/docs/getting-started/installation/">Installation</a></li>
+							                           
+									<li><a class="docs-link" href="https://argonism.github.io/scrapwell/docs/getting-started/claude-code-setup/">Claude Code Setup</a></li>
+							
+					</ul>
+					
+					
+					
+					
+							<h3>Concepts</h3>
+							<ul class="list-unstyled">
+							                           
+									<li><a class="docs-link active" href="https://argonism.github.io/scrapwell/docs/concepts/data-model/">Data Model</a></li>
+							                           
+									<li><a class="docs-link" href="https://argonism.github.io/scrapwell/docs/concepts/obsidian/">Obsidian Compatibility</a></li>
+							
+					</ul>
+					
+					
+					
+					
+							<h3>MCP Tools</h3>
+							<ul class="list-unstyled">
+							                           
+									<li><a class="docs-link" href="https://argonism.github.io/scrapwell/docs/tools/overview/">Tools Overview</a></li>
+							                           
+									<li><a class="docs-link" href="https://argonism.github.io/scrapwell/docs/tools/write-tools/">Write Tools</a></li>
+							                           
+									<li><a class="docs-link" href="https://argonism.github.io/scrapwell/docs/tools/read-tools/">Read Tools</a></li>
+							                           
+									<li><a class="docs-link" href="https://argonism.github.io/scrapwell/docs/tools/admin-tools/">Admin Tools</a></li>
+							
+					</ul>
+					
+					
+					
+					
+							<h3>Configuration</h3>
+							<ul class="list-unstyled">
+							                           
+									<li><a class="docs-link" href="https://argonism.github.io/scrapwell/docs/configuration/config-reference/">Configuration Reference</a></li>
+							
+					</ul>
+					
+					
+					
+					
+							<h3>Architecture</h3>
+							<ul class="list-unstyled">
+							                           
+									<li><a class="docs-link" href="https://argonism.github.io/scrapwell/docs/architecture/internals/">Internals</a></li>
+							
+					</ul>
+					
+					
+			
+	</nav>
+</div>
+
+	  
+  
+  <nav class="docs-toc d-none d-xl-block col-xl-3" aria-label="Secondary navigation">
+  	<div class="page-links">
+  			<h3>On this page</h3>
+  			<nav id="TableOfContents">
+  					<ul>
+  							
+  							<li><a href="https://argonism.github.io/scrapwell/docs/concepts/data-model/#three-level-hierarchy">Three-level hierarchy</a></li>
+  							
+  							
+  							<li><a href="https://argonism.github.io/scrapwell/docs/concepts/data-model/#on-disk-layout">On-disk layout</a></li>
+  							
+  							
+  							<li><a href="https://argonism.github.io/scrapwell/docs/concepts/data-model/#entity-metadata">Entity metadata</a></li>
+  							
+  							
+  							<li><a href="https://argonism.github.io/scrapwell/docs/concepts/data-model/#document-format">Document format</a></li>
+  							
+  							
+  							<li><a href="https://argonism.github.io/scrapwell/docs/concepts/data-model/#path-conventions">Path conventions</a></li>
+  							
+  							
+  							<li><a href="https://argonism.github.io/scrapwell/docs/concepts/data-model/#filename-uniqueness">Filename uniqueness</a></li>
+  							
+  							
+  							<li><a href="https://argonism.github.io/scrapwell/docs/concepts/data-model/#when-to-create-a-topic">When to create a Topic</a></li>
+  							
+  							
+  							<li><a href="https://argonism.github.io/scrapwell/docs/concepts/data-model/#tags-vs-path">Tags vs path</a></li>
+  							
+  							
+  					</ul>
+  			</nav>
+  	</div>
+  </nav>
+  
+
+      <main class="docs-content col-lg-11 col-xl-9">
+        <h1>Data Model</h1>
+        <p class="lead">Knowledge in scrapwell is organized in a three-level hierarchy: Entity > Topic > Document.</p>
+        <h2 id="three-level-hierarchy">Three-level hierarchy</h2>
+<pre class="giallo" style="color: #BFBDB6; background-color: #0D1017;"><code data-lang="plain"><span class="giallo-l"><span>Entity          — the subject of knowledge (a technology, project, library, concept)</span></span>
+<span class="giallo-l"><span>  Topic         — a sub-theme within an Entity (optional)</span></span>
+<span class="giallo-l"><span>    Document    — a single piece of knowledge (one Markdown file)</span></span></code></pre>
+<p>A <strong>Document</strong> always belongs to an <strong>Entity</strong>. A <strong>Topic</strong> is an optional grouping layer — use it only when a single Entity has many documents that clearly cluster into sub-themes.</p>
+<h2 id="on-disk-layout">On-disk layout</h2>
+<pre class="giallo" style="color: #BFBDB6; background-color: #0D1017;"><code data-lang="plain"><span class="giallo-l"><span>~/.memory/</span></span>
+<span class="giallo-l"><span>  config.toml          # optional config</span></span>
+<span class="giallo-l"><span>  metadata.db          # SQLite (derived — safe to delete and rebuild)</span></span>
+<span class="giallo-l"><span>  index/               # search index (derived — safe to delete and rebuild)</span></span>
+<span class="giallo-l"><span>  entities/</span></span>
+<span class="giallo-l"><span>    elasticsearch/</span></span>
+<span class="giallo-l"><span>      _entity.md                    # Entity metadata</span></span>
+<span class="giallo-l"><span>      mapping/                      # Topic (optional)</span></span>
+<span class="giallo-l"><span>        nested-dense-vector.md</span></span>
+<span class="giallo-l"><span>        dynamic-templates.md</span></span>
+<span class="giallo-l"><span>      performance/                  # Topic (optional)</span></span>
+<span class="giallo-l"><span>        shard-sizing.md</span></span>
+<span class="giallo-l"><span>      reindex-strategy.md           # Document directly under Entity</span></span>
+<span class="giallo-l"><span>    rust/</span></span>
+<span class="giallo-l"><span>      _entity.md</span></span>
+<span class="giallo-l"><span>      anyhow-vs-thiserror.md</span></span></code></pre>
+<p><strong>Markdown is the source of truth.</strong> SQLite and the search index are derived data. Delete them and run <code>scrapwell rebuild</code> to regenerate everything from the Markdown files.</p>
+<h2 id="entity-metadata">Entity metadata</h2>
+<p>Each Entity has a <code>_entity.md</code> file with a small YAML frontmatter:</p>
+<pre class="giallo" style="color: #BFBDB6; background-color: #0D1017;"><code data-lang="markdown"><span class="giallo-l"><span>---</span></span>
+<span class="giallo-l"><span style="color: #39BAE6;">id</span><span style="color: #BFBDB6B3;">:</span><span style="color: #AAD94C;"> &quot;01JF3X...&quot;</span></span>
+<span class="giallo-l"><span style="color: #39BAE6;">scope</span><span style="color: #BFBDB6B3;">:</span><span style="color: #AAD94C;"> knowledge</span></span>
+<span class="giallo-l"><span style="color: #39BAE6;">tags</span><span style="color: #BFBDB6B3;">:</span><span> [</span><span style="color: #AAD94C;">&quot;search-engine&quot;</span><span style="color: #BFBDB6B3;">,</span><span style="color: #AAD94C;"> &quot;database&quot;</span><span>]</span></span>
+<span class="giallo-l"><span style="color: #39BAE6;">created_at</span><span style="color: #BFBDB6B3;">:</span><span style="color: #AAD94C;"> &quot;2026-04-06T12:00:00Z&quot;</span></span>
+<span class="giallo-l"><span style="color: #39BAE6;">updated_at</span><span style="color: #BFBDB6B3;">:</span><span style="color: #AAD94C;"> &quot;2026-04-06T12:00:00Z&quot;</span></span>
+<span class="giallo-l"><span>---</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span>Knowledge about Elasticsearch: mappings, query tuning, and production operations.</span></span></code></pre>
+<p><code>scope</code> is either:</p>
+<ul>
+<li><code>knowledge</code> — general, reusable knowledge (technologies, libraries, concepts)</li>
+<li><code>project</code> — project-specific knowledge tied to a particular codebase</li>
+</ul>
+<h2 id="document-format">Document format</h2>
+<p>Each Document is a standard Markdown file:</p>
+<pre class="giallo" style="color: #BFBDB6; background-color: #0D1017;"><code data-lang="markdown"><span class="giallo-l"><span>---</span></span>
+<span class="giallo-l"><span style="color: #39BAE6;">id</span><span style="color: #BFBDB6B3;">:</span><span style="color: #AAD94C;"> &quot;01JF3X...&quot;</span></span>
+<span class="giallo-l"><span style="color: #39BAE6;">title</span><span style="color: #BFBDB6B3;">:</span><span style="color: #AAD94C;"> &quot;nested + dense_vector mapping&quot;</span></span>
+<span class="giallo-l"><span style="color: #39BAE6;">tags</span><span style="color: #BFBDB6B3;">:</span><span> [</span><span style="color: #AAD94C;">&quot;performance&quot;</span><span>]</span></span>
+<span class="giallo-l"><span style="color: #39BAE6;">created_at</span><span style="color: #BFBDB6B3;">:</span><span style="color: #AAD94C;"> &quot;2026-04-06T12:00:00Z&quot;</span></span>
+<span class="giallo-l"><span style="color: #39BAE6;">updated_at</span><span style="color: #BFBDB6B3;">:</span><span style="color: #AAD94C;"> &quot;2026-04-06T12:00:00Z&quot;</span></span>
+<span class="giallo-l"><span>---</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span>When using a nested field containing a dense_vector in Elasticsearch...</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span>Related: [[</span><span style="color: #39BAE6;">anyhow-vs-thiserror</span><span>]]</span></span></code></pre>
+<ul>
+<li>IDs are <a rel="external" href="https://github.com/ulid/spec">ULIDs</a> — time-sortable and unique</li>
+<li>Cross-references use <code>[[wikilink]]</code> syntax (Obsidian-compatible)</li>
+<li>No <code>links</code> frontmatter field — links live in the document body</li>
+</ul>
+<h2 id="path-conventions">Path conventions</h2>
+<ul>
+<li>Path format: <code>entities/&lt;entity&gt;/&lt;topic&gt;/&lt;document&gt;</code></li>
+<li>Maximum depth: 4 levels (including <code>entities/</code>)</li>
+<li>Names use kebab-case, ASCII alphanumeric + hyphens only</li>
+<li>Topics are optional — if an Entity has fewer than ~7 documents, put them directly under the Entity</li>
+</ul>
+<h2 id="filename-uniqueness">Filename uniqueness</h2>
+<p>All filenames must be unique across the entire vault (required for Obsidian <code>[[wikilink]]</code> resolution). When you call <code>save_memory</code>, scrapwell checks for conflicts. If a conflict is detected, it returns an error and the caller (Claude Code) retries with a suffix.</p>
+<h2 id="when-to-create-a-topic">When to create a Topic</h2>
+<p>Create a Topic only when <strong>both</strong> conditions are met:</p>
+<ol>
+<li>The Entity has <strong>more than ~7 documents</strong></li>
+<li>The documents clearly cluster into <strong>distinct sub-themes</strong></li>
+</ol>
+<p>Avoid creating Topics with only 1–2 documents — flat is fine.</p>
+<h2 id="tags-vs-path">Tags vs path</h2>
+<p>The path captures <em>where</em> a document belongs. Tags capture <em>cross-cutting concerns</em> that span multiple Entities or Topics.</p>
+<p>Example: tag a document with <code>performance</code> and searching for <code>tag:performance</code> returns matching documents from <code>elasticsearch/</code>, <code>rust/</code>, and <code>llm/</code> in a single query — regardless of their Entity or Topic.</p>
+
+        
+        
+<div class="docs-navigation d-flex justify-content-between">
+  
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+          
+        
+      
+        
+        
+          
+        
+      
+        
+        
+          
+        
+      
+        
+        
+          
+        
+      
+        
+        
+          
+            
+              
+              <a href="https:&#x2F;&#x2F;argonism.github.io&#x2F;scrapwell&#x2F;docs&#x2F;getting-started&#x2F;claude-code-setup&#x2F;">
+                <div class="card my-1">
+                  <div class="card-body py-2">
+                    &larr; Claude Code Setup
+                  </div>
+                </div>
+              </a>
+            
+            
+            
+          
+        
+      
+    
+  
+
+  
+  
+  
+  
+  
+    
+    
+    
+      
+      
+        
+      
+    
+      
+      
+        
+      
+    
+      
+      
+        
+          
+          
+          <a class="ms-auto" href="https:&#x2F;&#x2F;argonism.github.io&#x2F;scrapwell&#x2F;docs&#x2F;tools&#x2F;overview&#x2F;">
+            <div class="card my-1">
+              <div class="card-body py-2">
+                Tools Overview &rarr;
+              </div>
+            </div>
+          </a>
+          
+          
+          
+        
+      
+    
+      
+      
+        
+      
+    
+      
+      
+        
+      
+    
+  
+</div>
+
+      </main>
+    </div>
+  </div>
+</div>
+
+
+  
+    
+<footer class="footer text-muted">
+	<div class="container">
+		<div class="row">
+			<div class="col-lg-8 order-last order-lg-first">
+				<ul class="list-inline">
+					
+						<li class="list-inline-item">Built with <a href="https://www.getzola.org/">Zola</a> and <a href="https://github.com/aaranxu/adidoks">AdiDoks</a>. MIT License.</li>
+					
+				</ul>
+			</div>
+			<div class="col-lg-8 order-first order-lg-last text-lg-end">
+				<ul class="list-inline">
+					
+						
+							<li class="list-inline-item"><a href="https://argonism.github.io/scrapwell/https://github.com/argonism/scrapwell/">GitHub</a></li>
+						
+					
+				</ul>
+			</div>
+		</div>
+	</div>
+</footer>
+
+  
+
+  
+<script type="text/javascript" src="https://argonism.github.io/scrapwell/js/main.js" defer></script>
+
+  <script type="text/javascript" src="https://argonism.github.io/scrapwell/plugins/elasticlunr.min.js" defer></script>
+  <script type="text/javascript" src="https://argonism.github.io/scrapwell/search_index.en.js" defer></script>
+  <script type="text/javascript" src="https://argonism.github.io/scrapwell/js/search.js" defer></script>
+
+  
+</body>
+</html>

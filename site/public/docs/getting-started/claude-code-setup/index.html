@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="x-ua-compatible" content="ie=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+  <link rel="preload" as="font" href="https://argonism.github.io/scrapwell/fonts/vendor/jost/jost-v4-latin-regular.woff2" type="font/woff2" crossorigin>
+  <link rel="preload" as="font" href="https://argonism.github.io/scrapwell/fonts/vendor/jost/jost-v4-latin-700.woff2"  type="font/woff2" crossorigin>
+
+
+<link rel="stylesheet" href="https://argonism.github.io/scrapwell/main.css">
+
+
+
+  
+  
+    
+  
+
+  
+  
+    
+    
+  
+  
+  
+    
+  
+  
+  
+  
+    
+  
+  
+  
+
+
+  <meta name="robots" content="index, follow">
+  <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
+  <meta name="bingbot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
+
+
+	
+
+
+	
+
+<title>Claude Code Setup | scrapwell</title>
+<meta name="description" content="Register scrapwell as an MCP server in Claude Code.">
+<link rel="canonical" href="https://argonism.github.io/scrapwell/docs/getting-started/claude-code-setup/">
+
+
+
+
+
+
+  
+
+
+
+
+
+<script type="application/ld+json">
+  {
+    "@context": "http://schema.org",
+    "@type": "BreadcrumbList",
+    
+      
+      
+        
+        
+        
+        
+        
+        
+        
+        
+          {
+            "@type": "ListItem",
+            "position":  1 ,
+            "name": "Home",
+            "item": "https://argonism.github.io/scrapwell/"
+          },
+          
+          
+          {
+            "@type": "ListItem",
+            "position":  2 ,
+            "name": "Docs",
+            "item": "https://argonism.github.io/scrapwell/docs/"
+          },
+        
+      
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+          
+          
+          {
+            "@type": "ListItem",
+            "position":  3 ,
+            "name": "Getting Started",
+            "item": "https://argonism.github.io/scrapwell/docs/getting-started/"
+          },
+        
+      
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+          
+          
+          {
+            "@type": "ListItem",
+            "position":  4 ,
+            "name": "Claude Code Setup",
+            "item": "https://argonism.github.io/scrapwell/docs/getting-started/claude-code-setup/"
+          },
+        
+      
+    
+  }
+</script>
+
+
+
+
+
+
+  <meta name="theme-color" content="#fff">
+  <link rel="apple-touch-icon" sizes="180x180" href="https://argonism.github.io/scrapwell/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="https://argonism.github.io/scrapwell/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="https://argonism.github.io/scrapwell/favicon-16x16.png">
+  
+    <link rel="manifest" href="https://argonism.github.io/scrapwell/site.webmanifest" crossorigin>
+  
+
+
+  
+
+</head>
+
+  
+
+<body class="docs single">
+  
+  
+  
+  
+<div class="header-bar fixed-top"></div>
+<header class="navbar fixed-top navbar-expand-md navbar-light">
+	<div class="container">
+		<input class="menu-btn order-0" type="checkbox" id="menu-btn">
+		<label class="menu-icon d-md-none" for="menu-btn"><span class="navicon"></span></label>
+		<a class="navbar-brand order-1 order-md-0 me-auto" href="https://argonism.github.io/scrapwell">scrapwell</a>
+		<button id="mode" class="btn btn-link order-2 order-md-4" type="button" aria-label="Toggle mode">
+			<span class="toggle-dark"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-moon"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg></span>
+			<span class="toggle-light"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-sun"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg></span>
+		</button>
+		<ul class="navbar-nav fork-me order-3 order-md-5">
+			
+				
+					<li class="nav-item">
+						<a class="nav-link" href="https://github.com/argonism/scrapwell"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-github"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg><span class="ms-2 visually-hidden">GitHub</span></a>
+					</li>
+				
+			
+		</ul>
+		<div class="collapse navbar-collapse order-4 order-md-1">
+			<ul class="navbar-nav main-nav me-auto order-5 order-md-2">
+				
+					
+				
+				
+				
+					
+						<li class="nav-item docs active">
+							<a class="nav-link" href="https://argonism.github.io/scrapwell/docs/getting-started/installation/">Docs</a>
+						</li>
+					
+						<li class="nav-item">
+							<a class="nav-link" href="https://argonism.github.io/scrapwell/https://github.com/argonism/scrapwell/">GitHub</a>
+						</li>
+					
+				
+			</ul>
+			<div class="break order-6 d-md-none"></div>
+			
+				<form class="navbar-form flex-grow-1 order-7 order-md-3">
+					<input id="userinput" class="form-control is-search" type="search" placeholder="Search docs..."
+						aria-label="Search docs..." autocomplete="off">
+					<div id="suggestions" class="shadow bg-white rounded"></div>
+				</form>
+			
+		</div>
+	</div>
+</header>
+
+
+
+  
+<div class="wrap container" role="document">
+  <div class="content">
+    <div class="row flex-xl-nowrap">
+	  
+<div class="col-lg-5 col-xl-4 docs-sidebar">
+	<nav class="docs-links" aria-label="Main navigation">
+			
+			
+			
+			
+					
+					
+					
+							<h3>Getting Started</h3>
+							<ul class="list-unstyled">
+							                           
+									<li><a class="docs-link" href="https://argonism.github.io/scrapwell/docs/getting-started/installation/">Installation</a></li>
+							                           
+									<li><a class="docs-link active" href="https://argonism.github.io/scrapwell/docs/getting-started/claude-code-setup/">Claude Code Setup</a></li>
+							
+					</ul>
+					
+					
+					
+					
+							<h3>Concepts</h3>
+							<ul class="list-unstyled">
+							                           
+									<li><a class="docs-link" href="https://argonism.github.io/scrapwell/docs/concepts/data-model/">Data Model</a></li>
+							                           
+									<li><a class="docs-link" href="https://argonism.github.io/scrapwell/docs/concepts/obsidian/">Obsidian Compatibility</a></li>
+							
+					</ul>
+					
+					
+					
+					
+							<h3>MCP Tools</h3>
+							<ul class="list-unstyled">
+							                           
+									<li><a class="docs-link" href="https://argonism.github.io/scrapwell/docs/tools/overview/">Tools Overview</a></li>
+							                           
+									<li><a class="docs-link" href="https://argonism.github.io/scrapwell/docs/tools/write-tools/">Write Tools</a></li>
+							                           
+									<li><a class="docs-link" href="https://argonism.github.io/scrapwell/docs/tools/read-tools/">Read Tools</a></li>
+							                           
+									<li><a class="docs-link" href="https://argonism.github.io/scrapwell/docs/tools/admin-tools/">Admin Tools</a></li>
+							
+					</ul>
+					
+					
+					
+					
+							<h3>Configuration</h3>
+							<ul class="list-unstyled">
+							                           
+									<li><a class="docs-link" href="https://argonism.github.io/scrapwell/docs/configuration/config-reference/">Configuration Reference</a></li>
+							
+					</ul>
+					
+					
+					
+					
+							<h3>Architecture</h3>
+							<ul class="list-unstyled">
+							                           
+									<li><a class="docs-link" href="https://argonism.github.io/scrapwell/docs/architecture/internals/">Internals</a></li>
+							
+					</ul>
+					
+					
+			
+	</nav>
+</div>
+
+	  
+  
+  <nav class="docs-toc d-none d-xl-block col-xl-3" aria-label="Secondary navigation">
+  	<div class="page-links">
+  			<h3>On this page</h3>
+  			<nav id="TableOfContents">
+  					<ul>
+  							
+  							<li><a href="https://argonism.github.io/scrapwell/docs/getting-started/claude-code-setup/#register-with-claude-code">Register with Claude Code</a></li>
+  							
+  							
+  							<li><a href="https://argonism.github.io/scrapwell/docs/getting-started/claude-code-setup/#verify-the-connection">Verify the connection</a></li>
+  							
+  							
+  							<li><a href="https://argonism.github.io/scrapwell/docs/getting-started/claude-code-setup/#how-it-works">How it works</a></li>
+  							
+  							
+  							<li><a href="https://argonism.github.io/scrapwell/docs/getting-started/claude-code-setup/#configuration-optional">Configuration (optional)</a></li>
+  							
+  							
+  							<li><a href="https://argonism.github.io/scrapwell/docs/getting-started/claude-code-setup/#environment-variable">Environment variable</a></li>
+  							
+  							
+  							<li><a href="https://argonism.github.io/scrapwell/docs/getting-started/claude-code-setup/#unregister">Unregister</a></li>
+  							
+  							
+  					</ul>
+  			</nav>
+  	</div>
+  </nav>
+  
+
+      <main class="docs-content col-lg-11 col-xl-9">
+        <h1>Claude Code Setup</h1>
+        <p class="lead">Register scrapwell as an MCP server so Claude Code can persist knowledge between sessions.</p>
+        <h2 id="register-with-claude-code">Register with Claude Code</h2>
+<p>Run this once to register scrapwell as a user-scoped MCP server:</p>
+<pre class="giallo" style="color: #BFBDB6; background-color: #0D1017;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #59C2FF;">claude</span><span style="color: #AAD94C;"> mcp add scrapwell</span><span style="color: #95E6CB;"> --scope</span><span style="color: #AAD94C;"> user scrapwell serve</span></span></code></pre>
+<p>That's it. Claude Code will start scrapwell automatically when a session begins.</p>
+<h2 id="verify-the-connection">Verify the connection</h2>
+<p>Open Claude Code and ask:</p>
+<pre class="giallo" style="color: #BFBDB6; background-color: #0D1017;"><code data-lang="plain"><span class="giallo-l"><span>List my memories.</span></span></code></pre>
+<p>If scrapwell is connected, Claude Code will call <code>list_memories</code> and show the current knowledge tree (empty on first run).</p>
+<h2 id="how-it-works">How it works</h2>
+<p>scrapwell runs as a child process of Claude Code over <strong>stdio</strong>. No network port, no daemon process — the server starts and stops with each Claude Code session.</p>
+<p>Claude Code discovers the server via the MCP configuration you added above. During a session, it can call any of the <a href="../../tools/overview/">10 MCP tools</a> directly.</p>
+<h2 id="configuration-optional">Configuration (optional)</h2>
+<p>By default, memories are stored in <code>~/.memory/</code>. To change the location or search backend, create a config file:</p>
+<p><strong>User config</strong> (<code>~/.config/scrapwell/config.toml</code>):</p>
+<pre class="giallo" style="color: #BFBDB6; background-color: #0D1017;"><code data-lang="toml"><span class="giallo-l"><span>root</span><span style="color: #BFBDB6B3;"> =</span><span style="color: #AAD94C;"> &quot;~/.memory/&quot;</span></span>
+<span class="giallo-l"><span>search_backend</span><span style="color: #BFBDB6B3;"> =</span><span style="color: #AAD94C;"> &quot;lancedb&quot;</span><span style="color: #5A6673;font-style: italic;">  # or &quot;tantivy&quot;</span></span></code></pre>
+<p><strong>Project config</strong> (<code>.scrapwell.toml</code> at the repo root):</p>
+<pre class="giallo" style="color: #BFBDB6; background-color: #0D1017;"><code data-lang="toml"><span class="giallo-l"><span>root</span><span style="color: #BFBDB6B3;"> =</span><span style="color: #AAD94C;"> &quot;./memory&quot;</span><span style="color: #5A6673;font-style: italic;">  # store memories alongside the project</span></span></code></pre>
+<p>Project config takes precedence over user config for any field that is set. See the full <a href="../../configuration/config-reference/">configuration reference →</a></p>
+<h2 id="environment-variable">Environment variable</h2>
+<p>You can also override the memory root without a config file:</p>
+<pre class="giallo" style="color: #BFBDB6; background-color: #0D1017;"><code data-lang="shellscript"><span class="giallo-l"><span>SCRAPWELL_ROOT</span><span style="color: #F29668;">=</span><span style="color: #AAD94C;">~/my-memory</span><span style="color: #59C2FF;"> scrapwell</span><span style="color: #AAD94C;"> serve</span></span></code></pre><h2 id="unregister">Unregister</h2>
+<p>To remove scrapwell from Claude Code:</p>
+<pre class="giallo" style="color: #BFBDB6; background-color: #0D1017;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #59C2FF;">claude</span><span style="color: #AAD94C;"> mcp remove scrapwell</span><span style="color: #95E6CB;"> --scope</span><span style="color: #AAD94C;"> user</span></span></code></pre>
+        
+        
+<div class="docs-navigation d-flex justify-content-between">
+  
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+  
+
+  
+  
+  
+  
+  
+    
+    
+    
+      
+      
+        
+      
+    
+      
+      
+        
+          
+          
+          <a class="ms-auto" href="https:&#x2F;&#x2F;argonism.github.io&#x2F;scrapwell&#x2F;docs&#x2F;concepts&#x2F;data-model&#x2F;">
+            <div class="card my-1">
+              <div class="card-body py-2">
+                Data Model &rarr;
+              </div>
+            </div>
+          </a>
+          
+          
+          
+        
+      
+    
+      
+      
+        
+      
+    
+      
+      
+        
+      
+    
+      
+      
+        
+      
+    
+  
+</div>
+
+      </main>
+    </div>
+  </div>
+</div>
+
+
+  
+    
+<footer class="footer text-muted">
+	<div class="container">
+		<div class="row">
+			<div class="col-lg-8 order-last order-lg-first">
+				<ul class="list-inline">
+					
+						<li class="list-inline-item">Built with <a href="https://www.getzola.org/">Zola</a> and <a href="https://github.com/aaranxu/adidoks">AdiDoks</a>. MIT License.</li>
+					
+				</ul>
+			</div>
+			<div class="col-lg-8 order-first order-lg-last text-lg-end">
+				<ul class="list-inline">
+					
+						
+							<li class="list-inline-item"><a href="https://argonism.github.io/scrapwell/https://github.com/argonism/scrapwell/">GitHub</a></li>
+						
+					
+				</ul>
+			</div>
+		</div>
+	</div>
+</footer>
+
+  
+
+  
+<script type="text/javascript" src="https://argonism.github.io/scrapwell/js/main.js" defer></script>
+
+  <script type="text/javascript" src="https://argonism.github.io/scrapwell/plugins/elasticlunr.min.js" defer></script>
+  <script type="text/javascript" src="https://argonism.github.io/scrapwell/search_index.en.js" defer></script>
+  <script type="text/javascript" src="https://argonism.github.io/scrapwell/js/search.js" defer></script>
+
+  
+</body>
+</html>

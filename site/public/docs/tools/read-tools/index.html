@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="x-ua-compatible" content="ie=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+  <link rel="preload" as="font" href="https://argonism.github.io/scrapwell/fonts/vendor/jost/jost-v4-latin-regular.woff2" type="font/woff2" crossorigin>
+  <link rel="preload" as="font" href="https://argonism.github.io/scrapwell/fonts/vendor/jost/jost-v4-latin-700.woff2"  type="font/woff2" crossorigin>
+
+
+<link rel="stylesheet" href="https://argonism.github.io/scrapwell/main.css">
+
+
+
+  
+  
+    
+  
+
+  
+  
+    
+    
+  
+  
+  
+    
+  
+  
+  
+  
+    
+  
+  
+  
+
+
+  <meta name="robots" content="index, follow">
+  <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
+  <meta name="bingbot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
+
+
+	
+
+
+	
+
+<title>Read Tools | scrapwell</title>
+<meta name="description" content="Reference for the 3 read tools: search_memory, list_memories, get_memory.">
+<link rel="canonical" href="https://argonism.github.io/scrapwell/docs/tools/read-tools/">
+
+
+
+
+
+
+  
+
+
+
+
+
+<script type="application/ld+json">
+  {
+    "@context": "http://schema.org",
+    "@type": "BreadcrumbList",
+    
+      
+      
+        
+        
+        
+        
+        
+        
+        
+        
+          {
+            "@type": "ListItem",
+            "position":  1 ,
+            "name": "Home",
+            "item": "https://argonism.github.io/scrapwell/"
+          },
+          
+          
+          {
+            "@type": "ListItem",
+            "position":  2 ,
+            "name": "Docs",
+            "item": "https://argonism.github.io/scrapwell/docs/"
+          },
+        
+      
+        
+        
+        
+        
+        
+        
+        
+        
+          
+          
+          {
+            "@type": "ListItem",
+            "position":  3 ,
+            "name": "Tools",
+            "item": "https://argonism.github.io/scrapwell/docs/tools/"
+          },
+        
+      
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+          
+          
+          {
+            "@type": "ListItem",
+            "position":  4 ,
+            "name": "Read Tools",
+            "item": "https://argonism.github.io/scrapwell/docs/tools/read-tools/"
+          },
+        
+      
+    
+  }
+</script>
+
+
+
+
+
+
+  <meta name="theme-color" content="#fff">
+  <link rel="apple-touch-icon" sizes="180x180" href="https://argonism.github.io/scrapwell/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="https://argonism.github.io/scrapwell/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="https://argonism.github.io/scrapwell/favicon-16x16.png">
+  
+    <link rel="manifest" href="https://argonism.github.io/scrapwell/site.webmanifest" crossorigin>
+  
+
+
+  
+
+</head>
+
+  
+
+<body class="docs single">
+  
+  
+  
+  
+<div class="header-bar fixed-top"></div>
+<header class="navbar fixed-top navbar-expand-md navbar-light">
+	<div class="container">
+		<input class="menu-btn order-0" type="checkbox" id="menu-btn">
+		<label class="menu-icon d-md-none" for="menu-btn"><span class="navicon"></span></label>
+		<a class="navbar-brand order-1 order-md-0 me-auto" href="https://argonism.github.io/scrapwell">scrapwell</a>
+		<button id="mode" class="btn btn-link order-2 order-md-4" type="button" aria-label="Toggle mode">
+			<span class="toggle-dark"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-moon"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg></span>
+			<span class="toggle-light"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-sun"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg></span>
+		</button>
+		<ul class="navbar-nav fork-me order-3 order-md-5">
+			
+				
+					<li class="nav-item">
+						<a class="nav-link" href="https://github.com/argonism/scrapwell"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-github"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg><span class="ms-2 visually-hidden">GitHub</span></a>
+					</li>
+				
+			
+		</ul>
+		<div class="collapse navbar-collapse order-4 order-md-1">
+			<ul class="navbar-nav main-nav me-auto order-5 order-md-2">
+				
+					
+				
+				
+				
+					
+						<li class="nav-item docs active">
+							<a class="nav-link" href="https://argonism.github.io/scrapwell/docs/getting-started/installation/">Docs</a>
+						</li>
+					
+						<li class="nav-item">
+							<a class="nav-link" href="https://argonism.github.io/scrapwell/https://github.com/argonism/scrapwell/">GitHub</a>
+						</li>
+					
+				
+			</ul>
+			<div class="break order-6 d-md-none"></div>
+			
+				<form class="navbar-form flex-grow-1 order-7 order-md-3">
+					<input id="userinput" class="form-control is-search" type="search" placeholder="Search docs..."
+						aria-label="Search docs..." autocomplete="off">
+					<div id="suggestions" class="shadow bg-white rounded"></div>
+				</form>
+			
+		</div>
+	</div>
+</header>
+
+
+
+  
+<div class="wrap container" role="document">
+  <div class="content">
+    <div class="row flex-xl-nowrap">
+	  
+<div class="col-lg-5 col-xl-4 docs-sidebar">
+	<nav class="docs-links" aria-label="Main navigation">
+			
+			
+			
+			
+					
+					
+					
+							<h3>Getting Started</h3>
+							<ul class="list-unstyled">
+							                           
+									<li><a class="docs-link" href="https://argonism.github.io/scrapwell/docs/getting-started/installation/">Installation</a></li>
+							                           
+									<li><a class="docs-link" href="https://argonism.github.io/scrapwell/docs/getting-started/claude-code-setup/">Claude Code Setup</a></li>
+							
+					</ul>
+					
+					
+					
+					
+							<h3>Concepts</h3>
+							<ul class="list-unstyled">
+							                           
+									<li><a class="docs-link" href="https://argonism.github.io/scrapwell/docs/concepts/data-model/">Data Model</a></li>
+							                           
+									<li><a class="docs-link" href="https://argonism.github.io/scrapwell/docs/concepts/obsidian/">Obsidian Compatibility</a></li>
+							
+					</ul>
+					
+					
+					
+					
+							<h3>MCP Tools</h3>
+							<ul class="list-unstyled">
+							                           
+									<li><a class="docs-link" href="https://argonism.github.io/scrapwell/docs/tools/overview/">Tools Overview</a></li>
+							                           
+									<li><a class="docs-link" href="https://argonism.github.io/scrapwell/docs/tools/write-tools/">Write Tools</a></li>
+							                           
+									<li><a class="docs-link active" href="https://argonism.github.io/scrapwell/docs/tools/read-tools/">Read Tools</a></li>
+							                           
+									<li><a class="docs-link" href="https://argonism.github.io/scrapwell/docs/tools/admin-tools/">Admin Tools</a></li>
+							
+					</ul>
+					
+					
+					
+					
+							<h3>Configuration</h3>
+							<ul class="list-unstyled">
+							                           
+									<li><a class="docs-link" href="https://argonism.github.io/scrapwell/docs/configuration/config-reference/">Configuration Reference</a></li>
+							
+					</ul>
+					
+					
+					
+					
+							<h3>Architecture</h3>
+							<ul class="list-unstyled">
+							                           
+									<li><a class="docs-link" href="https://argonism.github.io/scrapwell/docs/architecture/internals/">Internals</a></li>
+							
+					</ul>
+					
+					
+			
+	</nav>
+</div>
+
+	  
+  
+  <nav class="docs-toc d-none d-xl-block col-xl-3" aria-label="Secondary navigation">
+  	<div class="page-links">
+  			<h3>On this page</h3>
+  			<nav id="TableOfContents">
+  					<ul>
+  							
+  							<li><a href="https://argonism.github.io/scrapwell/docs/tools/read-tools/#search-memory">search_memory</a></li>
+  							
+  							
+  							<li><a href="https://argonism.github.io/scrapwell/docs/tools/read-tools/#list-memories">list_memories</a></li>
+  							
+  							
+  							<li><a href="https://argonism.github.io/scrapwell/docs/tools/read-tools/#get-memory">get_memory</a></li>
+  							
+  							
+  					</ul>
+  			</nav>
+  	</div>
+  </nav>
+  
+
+      <main class="docs-content col-lg-11 col-xl-9">
+        <h1>Read Tools</h1>
+        <p class="lead">Three tools for retrieving knowledge: full-text search, tree browsing, and full-document fetch.</p>
+        <h2 id="search-memory">search_memory</h2>
+<p>Full-text search across all documents. Returns matching documents with highlighted snippets showing where the query matched.</p>
+<p><strong>Parameters</strong></p>
+<table><thead><tr><th>Name</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>query</code></td><td>string</td><td>yes</td><td>Search query</td></tr>
+<tr><td><code>entity</code></td><td>string</td><td>no</td><td>Restrict results to a specific Entity</td></tr>
+<tr><td><code>limit</code></td><td>number</td><td>no</td><td>Maximum number of results (default: 10)</td></tr>
+</tbody></table>
+<p><strong>Returns:</strong></p>
+<pre class="giallo" style="color: #BFBDB6; background-color: #0D1017;"><code data-lang="json"><span class="giallo-l"><span>[</span></span>
+<span class="giallo-l"><span>  {</span></span>
+<span class="giallo-l"><span style="color: #39BAE6;">    &quot;id&quot;</span><span style="color: #BFBDB6B3;">:</span><span style="color: #AAD94C;"> &quot;01JF3X...&quot;</span><span style="color: #BFBDB6B3;">,</span></span>
+<span class="giallo-l"><span style="color: #39BAE6;">    &quot;entity&quot;</span><span style="color: #BFBDB6B3;">:</span><span style="color: #AAD94C;"> &quot;elasticsearch&quot;</span><span style="color: #BFBDB6B3;">,</span></span>
+<span class="giallo-l"><span style="color: #39BAE6;">    &quot;topic&quot;</span><span style="color: #BFBDB6B3;">:</span><span style="color: #AAD94C;"> &quot;mapping&quot;</span><span style="color: #BFBDB6B3;">,</span></span>
+<span class="giallo-l"><span style="color: #39BAE6;">    &quot;name&quot;</span><span style="color: #BFBDB6B3;">:</span><span style="color: #AAD94C;"> &quot;nested-dense-vector&quot;</span><span style="color: #BFBDB6B3;">,</span></span>
+<span class="giallo-l"><span style="color: #39BAE6;">    &quot;title&quot;</span><span style="color: #BFBDB6B3;">:</span><span style="color: #AAD94C;"> &quot;nested + dense_vector mapping&quot;</span><span style="color: #BFBDB6B3;">,</span></span>
+<span class="giallo-l"><span style="color: #39BAE6;">    &quot;tags&quot;</span><span style="color: #BFBDB6B3;">:</span><span> [</span><span style="color: #AAD94C;">&quot;performance&quot;</span><span>]</span><span style="color: #BFBDB6B3;">,</span></span>
+<span class="giallo-l"><span style="color: #39BAE6;">    &quot;snippets&quot;</span><span style="color: #BFBDB6B3;">:</span><span> [</span><span style="color: #AAD94C;">&quot;...nested fieldで&lt;&lt;dense_vector&gt;&gt;を定義する際...&quot;</span><span>]</span><span style="color: #BFBDB6B3;">,</span></span>
+<span class="giallo-l"><span style="color: #39BAE6;">    &quot;score&quot;</span><span style="color: #BFBDB6B3;">:</span><span style="color: #D2A6FF;"> 0.85</span></span>
+<span class="giallo-l"><span>  }</span></span>
+<span class="giallo-l"><span>]</span></span></code></pre>
+<p>Query matches are highlighted with <code>&lt;&lt;...&gt;&gt;</code> in the snippets.</p>
+<hr />
+<h2 id="list-memories">list_memories</h2>
+<p>Browse the Entity/Topic tree. Use this before <code>save_memory</code> to understand what already exists.</p>
+<p><strong>Parameters</strong></p>
+<table><thead><tr><th>Name</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>entity</code></td><td>string</td><td>no</td><td>Restrict to a specific Entity (omit for full tree)</td></tr>
+<tr><td><code>depth</code></td><td>number</td><td>no</td><td>Expansion depth (default: 2)</td></tr>
+</tbody></table>
+<p><strong>Returns:</strong></p>
+<pre class="giallo" style="color: #BFBDB6; background-color: #0D1017;"><code data-lang="plain"><span class="giallo-l"><span>elasticsearch/ (5 documents)</span></span>
+<span class="giallo-l"><span>  mapping/ (2 documents)</span></span>
+<span class="giallo-l"><span>  performance/ (1 document)</span></span>
+<span class="giallo-l"><span>rust/ (3 documents)</span></span>
+<span class="giallo-l"><span>llm/ (4 documents)</span></span>
+<span class="giallo-l"><span>misedoko/ (6 documents)</span></span>
+<span class="giallo-l"><span>  api/ (2 documents)</span></span>
+<span class="giallo-l"><span>work-legaltech/ (3 documents)</span></span></code></pre>
+<hr />
+<h2 id="get-memory">get_memory</h2>
+<p>Fetch the full content of a single Document, including its frontmatter and body.</p>
+<p><strong>Parameters</strong></p>
+<table><thead><tr><th>Name</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>id</code></td><td>string</td><td>yes</td><td>Document ID (from <code>search_memory</code> or <code>list_memories</code>)</td></tr>
+</tbody></table>
+<p><strong>Returns:</strong> The complete Markdown file content:</p>
+<pre class="giallo" style="color: #BFBDB6; background-color: #0D1017;"><code data-lang="markdown"><span class="giallo-l"><span>---</span></span>
+<span class="giallo-l"><span style="color: #39BAE6;">id</span><span style="color: #BFBDB6B3;">:</span><span style="color: #AAD94C;"> &quot;01JF3X...&quot;</span></span>
+<span class="giallo-l"><span style="color: #39BAE6;">title</span><span style="color: #BFBDB6B3;">:</span><span style="color: #AAD94C;"> &quot;nested + dense_vector mapping&quot;</span></span>
+<span class="giallo-l"><span style="color: #39BAE6;">tags</span><span style="color: #BFBDB6B3;">:</span><span> [</span><span style="color: #AAD94C;">&quot;performance&quot;</span><span>]</span></span>
+<span class="giallo-l"><span style="color: #39BAE6;">created_at</span><span style="color: #BFBDB6B3;">:</span><span style="color: #AAD94C;"> &quot;2026-04-06T12:00:00Z&quot;</span></span>
+<span class="giallo-l"><span style="color: #39BAE6;">updated_at</span><span style="color: #BFBDB6B3;">:</span><span style="color: #AAD94C;"> &quot;2026-04-06T12:00:00Z&quot;</span></span>
+<span class="giallo-l"><span>---</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span>When using a nested field containing a dense_vector in Elasticsearch...</span></span></code></pre>
+        
+        
+<div class="docs-navigation d-flex justify-content-between">
+  
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+          
+        
+      
+        
+        
+          
+        
+      
+        
+        
+          
+        
+      
+        
+        
+          
+            
+              
+              <a href="https:&#x2F;&#x2F;argonism.github.io&#x2F;scrapwell&#x2F;docs&#x2F;concepts&#x2F;obsidian&#x2F;">
+                <div class="card my-1">
+                  <div class="card-body py-2">
+                    &larr; Obsidian Compatibility
+                  </div>
+                </div>
+              </a>
+            
+            
+            
+          
+        
+      
+        
+        
+          
+        
+      
+    
+  
+
+  
+  
+  
+  
+  
+    
+    
+    
+      
+      
+        
+      
+    
+      
+      
+        
+      
+    
+      
+      
+        
+      
+    
+      
+      
+        
+          
+          
+          <a class="ms-auto" href="https:&#x2F;&#x2F;argonism.github.io&#x2F;scrapwell&#x2F;docs&#x2F;configuration&#x2F;config-reference&#x2F;">
+            <div class="card my-1">
+              <div class="card-body py-2">
+                Configuration Reference &rarr;
+              </div>
+            </div>
+          </a>
+          
+          
+          
+        
+      
+    
+      
+      
+        
+      
+    
+  
+</div>
+
+      </main>
+    </div>
+  </div>
+</div>
+
+
+  
+    
+<footer class="footer text-muted">
+	<div class="container">
+		<div class="row">
+			<div class="col-lg-8 order-last order-lg-first">
+				<ul class="list-inline">
+					
+						<li class="list-inline-item">Built with <a href="https://www.getzola.org/">Zola</a> and <a href="https://github.com/aaranxu/adidoks">AdiDoks</a>. MIT License.</li>
+					
+				</ul>
+			</div>
+			<div class="col-lg-8 order-first order-lg-last text-lg-end">
+				<ul class="list-inline">
+					
+						
+							<li class="list-inline-item"><a href="https://argonism.github.io/scrapwell/https://github.com/argonism/scrapwell/">GitHub</a></li>
+						
+					
+				</ul>
+			</div>
+		</div>
+	</div>
+</footer>
+
+  
+
+  
+<script type="text/javascript" src="https://argonism.github.io/scrapwell/js/main.js" defer></script>
+
+  <script type="text/javascript" src="https://argonism.github.io/scrapwell/plugins/elasticlunr.min.js" defer></script>
+  <script type="text/javascript" src="https://argonism.github.io/scrapwell/search_index.en.js" defer></script>
+  <script type="text/javascript" src="https://argonism.github.io/scrapwell/js/search.js" defer></script>
+
+  
+</body>
+</html>

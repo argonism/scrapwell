@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="x-ua-compatible" content="ie=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+  <link rel="preload" as="font" href="https://argonism.github.io/scrapwell/fonts/vendor/jost/jost-v4-latin-regular.woff2" type="font/woff2" crossorigin>
+  <link rel="preload" as="font" href="https://argonism.github.io/scrapwell/fonts/vendor/jost/jost-v4-latin-700.woff2"  type="font/woff2" crossorigin>
+
+
+<link rel="stylesheet" href="https://argonism.github.io/scrapwell/main.css">
+
+
+
+  
+  
+    
+  
+
+  
+  
+    
+    
+  
+  
+  
+    
+  
+  
+  
+  
+    
+  
+  
+  
+
+
+  <meta name="robots" content="index, follow">
+  <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
+  <meta name="bingbot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
+
+
+	
+
+
+	
+
+<title>Write Tools | scrapwell</title>
+<meta name="description" content="Reference for the 6 write tools: create_entity, update_entity, delete_entity, save_memory, update_memory, delete_memory.">
+<link rel="canonical" href="https://argonism.github.io/scrapwell/docs/tools/write-tools/">
+
+
+
+
+
+
+  
+
+
+
+
+
+<script type="application/ld+json">
+  {
+    "@context": "http://schema.org",
+    "@type": "BreadcrumbList",
+    
+      
+      
+        
+        
+        
+        
+        
+        
+        
+        
+          {
+            "@type": "ListItem",
+            "position":  1 ,
+            "name": "Home",
+            "item": "https://argonism.github.io/scrapwell/"
+          },
+          
+          
+          {
+            "@type": "ListItem",
+            "position":  2 ,
+            "name": "Docs",
+            "item": "https://argonism.github.io/scrapwell/docs/"
+          },
+        
+      
+        
+        
+        
+        
+        
+        
+        
+        
+          
+          
+          {
+            "@type": "ListItem",
+            "position":  3 ,
+            "name": "Tools",
+            "item": "https://argonism.github.io/scrapwell/docs/tools/"
+          },
+        
+      
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+          
+          
+          {
+            "@type": "ListItem",
+            "position":  4 ,
+            "name": "Write Tools",
+            "item": "https://argonism.github.io/scrapwell/docs/tools/write-tools/"
+          },
+        
+      
+    
+  }
+</script>
+
+
+
+
+
+
+  <meta name="theme-color" content="#fff">
+  <link rel="apple-touch-icon" sizes="180x180" href="https://argonism.github.io/scrapwell/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="https://argonism.github.io/scrapwell/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="https://argonism.github.io/scrapwell/favicon-16x16.png">
+  
+    <link rel="manifest" href="https://argonism.github.io/scrapwell/site.webmanifest" crossorigin>
+  
+
+
+  
+
+</head>
+
+  
+
+<body class="docs single">
+  
+  
+  
+  
+<div class="header-bar fixed-top"></div>
+<header class="navbar fixed-top navbar-expand-md navbar-light">
+	<div class="container">
+		<input class="menu-btn order-0" type="checkbox" id="menu-btn">
+		<label class="menu-icon d-md-none" for="menu-btn"><span class="navicon"></span></label>
+		<a class="navbar-brand order-1 order-md-0 me-auto" href="https://argonism.github.io/scrapwell">scrapwell</a>
+		<button id="mode" class="btn btn-link order-2 order-md-4" type="button" aria-label="Toggle mode">
+			<span class="toggle-dark"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-moon"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg></span>
+			<span class="toggle-light"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-sun"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg></span>
+		</button>
+		<ul class="navbar-nav fork-me order-3 order-md-5">
+			
+				
+					<li class="nav-item">
+						<a class="nav-link" href="https://github.com/argonism/scrapwell"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-github"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg><span class="ms-2 visually-hidden">GitHub</span></a>
+					</li>
+				
+			
+		</ul>
+		<div class="collapse navbar-collapse order-4 order-md-1">
+			<ul class="navbar-nav main-nav me-auto order-5 order-md-2">
+				
+					
+				
+				
+				
+					
+						<li class="nav-item docs active">
+							<a class="nav-link" href="https://argonism.github.io/scrapwell/docs/getting-started/installation/">Docs</a>
+						</li>
+					
+						<li class="nav-item">
+							<a class="nav-link" href="https://argonism.github.io/scrapwell/https://github.com/argonism/scrapwell/">GitHub</a>
+						</li>
+					
+				
+			</ul>
+			<div class="break order-6 d-md-none"></div>
+			
+				<form class="navbar-form flex-grow-1 order-7 order-md-3">
+					<input id="userinput" class="form-control is-search" type="search" placeholder="Search docs..."
+						aria-label="Search docs..." autocomplete="off">
+					<div id="suggestions" class="shadow bg-white rounded"></div>
+				</form>
+			
+		</div>
+	</div>
+</header>
+
+
+
+  
+<div class="wrap container" role="document">
+  <div class="content">
+    <div class="row flex-xl-nowrap">
+	  
+<div class="col-lg-5 col-xl-4 docs-sidebar">
+	<nav class="docs-links" aria-label="Main navigation">
+			
+			
+			
+			
+					
+					
+					
+							<h3>Getting Started</h3>
+							<ul class="list-unstyled">
+							                           
+									<li><a class="docs-link" href="https://argonism.github.io/scrapwell/docs/getting-started/installation/">Installation</a></li>
+							                           
+									<li><a class="docs-link" href="https://argonism.github.io/scrapwell/docs/getting-started/claude-code-setup/">Claude Code Setup</a></li>
+							
+					</ul>
+					
+					
+					
+					
+							<h3>Concepts</h3>
+							<ul class="list-unstyled">
+							                           
+									<li><a class="docs-link" href="https://argonism.github.io/scrapwell/docs/concepts/data-model/">Data Model</a></li>
+							                           
+									<li><a class="docs-link" href="https://argonism.github.io/scrapwell/docs/concepts/obsidian/">Obsidian Compatibility</a></li>
+							
+					</ul>
+					
+					
+					
+					
+							<h3>MCP Tools</h3>
+							<ul class="list-unstyled">
+							                           
+									<li><a class="docs-link" href="https://argonism.github.io/scrapwell/docs/tools/overview/">Tools Overview</a></li>
+							                           
+									<li><a class="docs-link active" href="https://argonism.github.io/scrapwell/docs/tools/write-tools/">Write Tools</a></li>
+							                           
+									<li><a class="docs-link" href="https://argonism.github.io/scrapwell/docs/tools/read-tools/">Read Tools</a></li>
+							                           
+									<li><a class="docs-link" href="https://argonism.github.io/scrapwell/docs/tools/admin-tools/">Admin Tools</a></li>
+							
+					</ul>
+					
+					
+					
+					
+							<h3>Configuration</h3>
+							<ul class="list-unstyled">
+							                           
+									<li><a class="docs-link" href="https://argonism.github.io/scrapwell/docs/configuration/config-reference/">Configuration Reference</a></li>
+							
+					</ul>
+					
+					
+					
+					
+							<h3>Architecture</h3>
+							<ul class="list-unstyled">
+							                           
+									<li><a class="docs-link" href="https://argonism.github.io/scrapwell/docs/architecture/internals/">Internals</a></li>
+							
+					</ul>
+					
+					
+			
+	</nav>
+</div>
+
+	  
+  
+  <nav class="docs-toc d-none d-xl-block col-xl-3" aria-label="Secondary navigation">
+  	<div class="page-links">
+  			<h3>On this page</h3>
+  			<nav id="TableOfContents">
+  					<ul>
+  							
+  							<li><a href="https://argonism.github.io/scrapwell/docs/tools/write-tools/#create-entity">create_entity</a></li>
+  							
+  							
+  							<li><a href="https://argonism.github.io/scrapwell/docs/tools/write-tools/#update-entity">update_entity</a></li>
+  							
+  							
+  							<li><a href="https://argonism.github.io/scrapwell/docs/tools/write-tools/#delete-entity">delete_entity</a></li>
+  							
+  							
+  							<li><a href="https://argonism.github.io/scrapwell/docs/tools/write-tools/#save-memory">save_memory</a></li>
+  							
+  							
+  							<li><a href="https://argonism.github.io/scrapwell/docs/tools/write-tools/#update-memory">update_memory</a></li>
+  							
+  							
+  							<li><a href="https://argonism.github.io/scrapwell/docs/tools/write-tools/#delete-memory">delete_memory</a></li>
+  							
+  							
+  					</ul>
+  			</nav>
+  	</div>
+  </nav>
+  
+
+      <main class="docs-content col-lg-11 col-xl-9">
+        <h1>Write Tools</h1>
+        <p class="lead">Six tools for creating and modifying entities and documents.</p>
+        <h2 id="create-entity">create_entity</h2>
+<p>Create a new Entity. Performs a similarity check against existing entity names (edit distance) and returns an error with candidate suggestions if a similar entity already exists.</p>
+<p><strong>Parameters</strong></p>
+<table><thead><tr><th>Name</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>name</code></td><td>string</td><td>yes</td><td>Entity name (e.g. <code>"elasticsearch"</code>)</td></tr>
+<tr><td><code>scope</code></td><td>string</td><td>yes</td><td><code>"knowledge"</code> or <code>"project"</code></td></tr>
+<tr><td><code>description</code></td><td>string</td><td>no</td><td>Human-readable description of the Entity</td></tr>
+<tr><td><code>tags</code></td><td>string[]</td><td>no</td><td>Entity-level tags</td></tr>
+</tbody></table>
+<p><strong>Returns:</strong> <code>{ id: string }</code></p>
+<p><strong>Similar name response:</strong></p>
+<pre class="giallo" style="color: #BFBDB6; background-color: #0D1017;"><code data-lang="json"><span class="giallo-l"><span>{</span></span>
+<span class="giallo-l"><span style="color: #39BAE6;">  &quot;error&quot;</span><span style="color: #BFBDB6B3;">:</span><span style="color: #AAD94C;"> &quot;similar_entity_exists&quot;</span><span style="color: #BFBDB6B3;">,</span></span>
+<span class="giallo-l"><span style="color: #39BAE6;">  &quot;message&quot;</span><span style="color: #BFBDB6B3;">:</span><span style="color: #AAD94C;"> &quot;Entity &#39;elastic-search&#39; is similar to existing entities&quot;</span><span style="color: #BFBDB6B3;">,</span></span>
+<span class="giallo-l"><span style="color: #39BAE6;">  &quot;suggestions&quot;</span><span style="color: #BFBDB6B3;">:</span><span> [</span><span style="color: #AAD94C;">&quot;elasticsearch&quot;</span><span>]</span></span>
+<span class="giallo-l"><span>}</span></span></code></pre>
+<p>When you receive this, either reuse the suggested entity or choose a clearly distinct name.</p>
+<hr />
+<h2 id="update-entity">update_entity</h2>
+<p>Partial update of an existing Entity. Only the fields you specify are changed.</p>
+<p><strong>Parameters</strong></p>
+<table><thead><tr><th>Name</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>id</code></td><td>string</td><td>yes</td><td>Target entity ID</td></tr>
+<tr><td><code>scope</code></td><td>string</td><td>no</td><td>New scope</td></tr>
+<tr><td><code>description</code></td><td>string</td><td>no</td><td>New description</td></tr>
+<tr><td><code>tags</code></td><td>string[]</td><td>no</td><td>New tags (full replacement)</td></tr>
+</tbody></table>
+<hr />
+<h2 id="delete-entity">delete_entity</h2>
+<p>Delete an Entity and cascade-delete all its Documents and Topic directories. Removes the Markdown files, SQLite records, and search index entries.</p>
+<p><strong>Parameters</strong></p>
+<table><thead><tr><th>Name</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>id</code></td><td>string</td><td>yes</td><td>Target entity ID</td></tr>
+</tbody></table>
+<blockquote>
+<p><strong>Warning:</strong> This is irreversible. All documents under the Entity are permanently deleted.</p>
+</blockquote>
+<hr />
+<h2 id="save-memory">save_memory</h2>
+<p>Save a new Document under an existing Entity. Topic directories are created automatically if they don't exist.</p>
+<p><strong>Parameters</strong></p>
+<table><thead><tr><th>Name</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>entity</code></td><td>string</td><td>yes</td><td>Entity name (e.g. <code>"elasticsearch"</code>)</td></tr>
+<tr><td><code>name</code></td><td>string</td><td>yes</td><td>Document filename without extension (e.g. <code>"nested-dense-vector"</code>)</td></tr>
+<tr><td><code>title</code></td><td>string</td><td>yes</td><td>Human-readable title</td></tr>
+<tr><td><code>content</code></td><td>string</td><td>yes</td><td>Markdown body (may include <code>[[wikilinks]]</code>)</td></tr>
+<tr><td><code>topic</code></td><td>string</td><td>no</td><td>Topic name for grouping (e.g. <code>"mapping"</code>)</td></tr>
+<tr><td><code>tags</code></td><td>string[]</td><td>no</td><td>Cross-cutting tags</td></tr>
+</tbody></table>
+<p><strong>Returns:</strong> <code>{ id: string }</code></p>
+<p><strong>Filename conflict:</strong> If the filename already exists anywhere in the vault, scrapwell returns an error. Add a suffix (e.g. <code>-2</code>) and retry.</p>
+<p><strong>Best practices (built into the tool description):</strong></p>
+<ul>
+<li>Call <code>create_entity</code> before the first <code>save_memory</code> for a new Entity</li>
+<li>Call <code>list_memories</code> to see the existing structure before saving</li>
+<li>Create a Topic only when the Entity has ~7+ documents and they cluster into clear sub-themes</li>
+<li>Don't put path information (entity or topic names) into tags</li>
+</ul>
+<hr />
+<h2 id="update-memory">update_memory</h2>
+<p>Partial update of an existing Document. Only the fields you specify are changed.</p>
+<p><strong>Parameters</strong></p>
+<table><thead><tr><th>Name</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>id</code></td><td>string</td><td>yes</td><td>Target document ID</td></tr>
+<tr><td><code>title</code></td><td>string</td><td>no</td><td>New title</td></tr>
+<tr><td><code>content</code></td><td>string</td><td>no</td><td>New body (full replacement)</td></tr>
+<tr><td><code>tags</code></td><td>string[]</td><td>no</td><td>New tags (full replacement)</td></tr>
+</tbody></table>
+<hr />
+<h2 id="delete-memory">delete_memory</h2>
+<p>Delete a Document. Removes the Markdown file and its search index entry.</p>
+<p><strong>Parameters</strong></p>
+<table><thead><tr><th>Name</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>id</code></td><td>string</td><td>yes</td><td>Target document ID</td></tr>
+</tbody></table>
+
+        
+        
+<div class="docs-navigation d-flex justify-content-between">
+  
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+          
+        
+      
+        
+        
+          
+        
+      
+        
+        
+          
+        
+      
+        
+        
+          
+            
+              
+              <a href="https:&#x2F;&#x2F;argonism.github.io&#x2F;scrapwell&#x2F;docs&#x2F;concepts&#x2F;obsidian&#x2F;">
+                <div class="card my-1">
+                  <div class="card-body py-2">
+                    &larr; Obsidian Compatibility
+                  </div>
+                </div>
+              </a>
+            
+            
+            
+          
+        
+      
+        
+        
+          
+        
+      
+    
+  
+
+  
+  
+  
+  
+  
+    
+    
+    
+      
+      
+        
+      
+    
+      
+      
+        
+      
+    
+      
+      
+        
+      
+    
+      
+      
+        
+          
+          
+          <a class="ms-auto" href="https:&#x2F;&#x2F;argonism.github.io&#x2F;scrapwell&#x2F;docs&#x2F;configuration&#x2F;config-reference&#x2F;">
+            <div class="card my-1">
+              <div class="card-body py-2">
+                Configuration Reference &rarr;
+              </div>
+            </div>
+          </a>
+          
+          
+          
+        
+      
+    
+      
+      
+        
+      
+    
+  
+</div>
+
+      </main>
+    </div>
+  </div>
+</div>
+
+
+  
+    
+<footer class="footer text-muted">
+	<div class="container">
+		<div class="row">
+			<div class="col-lg-8 order-last order-lg-first">
+				<ul class="list-inline">
+					
+						<li class="list-inline-item">Built with <a href="https://www.getzola.org/">Zola</a> and <a href="https://github.com/aaranxu/adidoks">AdiDoks</a>. MIT License.</li>
+					
+				</ul>
+			</div>
+			<div class="col-lg-8 order-first order-lg-last text-lg-end">
+				<ul class="list-inline">
+					
+						
+							<li class="list-inline-item"><a href="https://argonism.github.io/scrapwell/https://github.com/argonism/scrapwell/">GitHub</a></li>
+						
+					
+				</ul>
+			</div>
+		</div>
+	</div>
+</footer>
+
+  
+
+  
+<script type="text/javascript" src="https://argonism.github.io/scrapwell/js/main.js" defer></script>
+
+  <script type="text/javascript" src="https://argonism.github.io/scrapwell/plugins/elasticlunr.min.js" defer></script>
+  <script type="text/javascript" src="https://argonism.github.io/scrapwell/search_index.en.js" defer></script>
+  <script type="text/javascript" src="https://argonism.github.io/scrapwell/js/search.js" defer></script>
+
+  
+</body>
+</html>
