@@ -44,8 +44,10 @@ impl Config {
 }
 
 /// user スコープ: ~/.config/scrapwell/config.toml
+/// Use ~/.config (XDG-style) on all platforms so the documented path works on macOS too,
+/// where dirs::config_dir() returns ~/Library/Application Support.
 fn load_user_config() -> Config {
-    let Some(path) = dirs::config_dir().map(|p| p.join("scrapwell").join("config.toml")) else {
+    let Some(path) = dirs::home_dir().map(|p| p.join(".config").join("scrapwell").join("config.toml")) else {
         return Config::default();
     };
     let Ok(content) = std::fs::read_to_string(&path) else {
