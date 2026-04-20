@@ -1,6 +1,6 @@
 [package]
 name = "scrapwell-core"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 description = "Core library for scrapwell MCP memory server"
 repository = "https://github.com/argonism/scrapwell"
