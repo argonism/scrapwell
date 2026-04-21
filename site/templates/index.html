@@ -1,0 +1,624 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>scrapwell — MCP memory server</title>
+<meta name="description" content="A minimal MCP memory server for LLM agents and people. No hidden LLM calls, no server to run. Just human-readable Markdown on disk, fully searchable.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,400;1,6..72,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f4f1ea;
+    --bg-2: #eee9df;
+    --ink: #1a1a17;
+    --ink-soft: #4a4943;
+    --muted: #86847b;
+    --rule: #ddd7c8;
+    --rule-soft: #e7e1d2;
+    --card: #efeade;
+    --serif: 'Newsreader', 'Times New Roman', serif;
+    --sans: 'Inter', system-ui, sans-serif;
+    --mono: 'JetBrains Mono', ui-monospace, monospace;
+  }
+  :root.dark {
+    --bg: #131311;
+    --bg-2: #181814;
+    --ink: #e8e6dd;
+    --ink-soft: #b4b2a8;
+    --muted: #78766c;
+    --rule: #242320;
+    --rule-soft: #1d1c19;
+    --card: #1a1916;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  a { color: inherit; }
+  .wrap { max-width: 1160px; margin: 0 auto; padding: 0 40px; }
+  .mono { font-family: var(--mono); font-size: 12px; }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* NAV */
+  nav.top {
+    position: sticky; top: 0; z-index: 40;
+    background: color-mix(in oklab, var(--bg) 88%, transparent);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--rule-soft);
+  }
+  nav.top .wrap { display: flex; align-items: center; justify-content: space-between; padding-top: 18px; padding-bottom: 18px; }
+  .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; color: inherit; }
+  .brand-mark {
+    width: 20px; height: 20px;
+    border: 1px solid var(--ink);
+    border-radius: 3px;
+    display: grid; place-items: center;
+    font-family: var(--mono); font-weight: 500; font-size: 11px;
+  }
+  .brand-name { font-family: var(--mono); font-size: 13px; font-weight: 500; }
+  nav.top ul { list-style: none; display: flex; gap: 28px; margin: 0; padding: 0; }
+  nav.top ul a { text-decoration: none; font-size: 13px; color: var(--ink-soft); }
+  nav.top ul a:hover { color: var(--ink); }
+  .nav-cta {
+    font-family: var(--mono); font-size: 12px;
+    text-decoration: none;
+    color: var(--ink-soft);
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 2px;
+  }
+  .nav-cta:hover { color: var(--ink); border-bottom-color: var(--ink); }
+
+  /* HERO */
+  .hero { padding: 96px 0 72px; }
+  .hero-grid {
+    display: grid;
+    grid-template-columns: 1.05fr 1fr;
+    gap: 72px;
+    align-items: start;
+  }
+  .hero h1 {
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: clamp(52px, 7.2vw, 92px);
+    line-height: 1.0;
+    letter-spacing: -0.015em;
+    margin: 24px 0 0;
+    color: var(--ink);
+  }
+  .hero h1 em {
+    font-style: italic;
+    font-family: var(--serif);
+    color: var(--ink);
+  }
+  .hero p.lede {
+    font-size: 17px;
+    line-height: 1.55;
+    color: var(--ink-soft);
+    margin: 32px 0 0;
+    max-width: 46ch;
+  }
+  .hero-cta { display: flex; gap: 28px; margin-top: 36px; flex-wrap: wrap; align-items: center; }
+  .btn-link {
+    display: inline-flex; align-items: center; gap: 8px;
+    text-decoration: none;
+    font-family: var(--mono); font-size: 13px;
+    color: var(--ink);
+    border-bottom: 1px solid var(--ink);
+    padding-bottom: 3px;
+  }
+  .btn-link.soft { color: var(--ink-soft); border-bottom-color: var(--rule); }
+  .btn-link.soft:hover { color: var(--ink); border-bottom-color: var(--ink); }
+  .btn-link .arr { transition: transform .2s ease; }
+  .btn-link:hover .arr { transform: translate(2px, -2px); }
+
+  .hero-meta {
+    margin-top: 48px;
+    display: flex; gap: 22px; flex-wrap: wrap;
+    font-family: var(--mono); font-size: 11px; color: var(--muted);
+  }
+  .hero-meta span::before { content: '·  '; color: var(--rule); margin-right: 2px; }
+  .hero-meta span:first-child::before { content: ''; }
+
+  /* HERO FILE CARD */
+  .file {
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    background: var(--bg-2);
+    overflow: hidden;
+  }
+  .file-bar {
+    display: flex; align-items: center; gap: 10px;
+    padding: 11px 16px;
+    border-bottom: 1px solid var(--rule-soft);
+    font-family: var(--mono); font-size: 11px;
+    color: var(--muted);
+  }
+  .file-path b { color: var(--ink-soft); font-weight: 400; }
+  .file-body { padding: 28px 32px 32px; font-family: var(--mono); font-size: 12.5px; line-height: 1.8; color: var(--ink-soft); }
+  .md-h1 { font-family: var(--serif); font-size: 30px; font-weight: 400; line-height: 1.15; color: var(--ink); margin: 2px 0 8px; letter-spacing: -0.01em; }
+  .md-h1::before { content: '# '; color: var(--muted); font-family: var(--mono); font-size: 13px; vertical-align: 3px; font-weight: 400; }
+  .md-meta { display: flex; gap: 14px; color: var(--muted); font-size: 11px; margin-bottom: 18px; }
+  .md-meta span::before { content: '·  '; color: var(--rule); }
+  .md-meta span:first-child::before { content: ''; }
+  .md-h2 { font-family: var(--mono); font-size: 12px; color: var(--ink); margin: 22px 0 8px; font-weight: 500; }
+  .md-h2::before { content: '## '; color: var(--muted); font-weight: 400; }
+  .md-li { padding-left: 18px; position: relative; }
+  .md-li::before { content: '–'; position: absolute; left: 4px; color: var(--muted); }
+  .wikilink {
+    color: var(--ink);
+    text-decoration: none;
+    border-bottom: 1px solid var(--rule);
+  }
+  .wikilink:hover { border-bottom-color: var(--ink-soft); }
+  .tag { color: var(--muted); }
+  .cursor {
+    display: inline-block; width: 6px; height: 13px; background: var(--ink);
+    vertical-align: -2px; margin-left: 2px; opacity: 0.8;
+    animation: blink 1.2s steps(2) infinite;
+  }
+  @keyframes blink { 50% { opacity: 0 } }
+
+  /* SECTIONS */
+  section { padding: 112px 0; border-top: 1px solid var(--rule-soft); }
+  .section-head {
+    display: grid;
+    grid-template-columns: 180px 1fr;
+    gap: 48px;
+    margin-bottom: 72px;
+    align-items: baseline;
+  }
+  .section-head h2 {
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: clamp(34px, 4vw, 52px);
+    line-height: 1.1;
+    letter-spacing: -0.012em;
+    margin: 0;
+    max-width: 22ch;
+  }
+  .section-head h2 em { font-style: italic; }
+  .section-head .lead { color: var(--ink-soft); max-width: 52ch; font-size: 15px; margin-top: 20px; }
+
+  /* FEATURES */
+  .features {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 48px 56px;
+  }
+  .feature {
+    padding-top: 26px;
+    border-top: 1px solid var(--rule);
+  }
+  .feature .num {
+    font-family: var(--mono); font-size: 11px; color: var(--muted);
+    letter-spacing: 0.08em;
+    margin-bottom: 18px;
+  }
+  .feature h3 {
+    font-family: var(--serif); font-weight: 400;
+    font-size: 24px; line-height: 1.2; letter-spacing: -0.008em;
+    margin: 0 0 12px;
+    color: var(--ink);
+  }
+  .feature p {
+    color: var(--ink-soft); font-size: 14.5px; margin: 0; line-height: 1.6;
+    max-width: 32ch;
+  }
+
+  /* ARCHITECTURE */
+  .arch {
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    background: var(--bg-2);
+    padding: 48px;
+  }
+  .arch-row { display: grid; grid-template-columns: 1fr 24px 1fr; gap: 24px; align-items: stretch; }
+  .arch-node {
+    border: 1px solid var(--rule-soft);
+    background: var(--bg);
+    border-radius: 4px;
+    padding: 24px 26px;
+  }
+  .arch-node .lvl { font-family: var(--mono); font-size: 10px; color: var(--muted); letter-spacing: 0.12em; text-transform: uppercase; }
+  .arch-node h4 { font-family: var(--serif); font-weight: 400; font-size: 22px; line-height: 1.2; margin: 8px 0 10px; letter-spacing: -0.005em; }
+  .arch-node p { margin: 0; font-size: 13.5px; color: var(--ink-soft); line-height: 1.6; }
+  .arch-node ul { margin: 18px 0 0; padding: 0; list-style: none; font-family: var(--mono); font-size: 11.5px; color: var(--ink-soft); }
+  .arch-node ul li { padding: 6px 0; border-top: 1px solid var(--rule-soft); }
+  .arch-node ul li:first-child { border-top: 0; }
+  .arch-arrow { align-self: center; text-align: center; color: var(--muted); font-family: var(--mono); font-size: 14px; }
+
+  /* TOOLS */
+  .tools { border-top: 1px solid var(--rule); }
+  .tool {
+    display: grid;
+    grid-template-columns: 60px 200px 1fr 90px;
+    gap: 24px;
+    align-items: baseline;
+    padding: 22px 0;
+    border-bottom: 1px solid var(--rule-soft);
+  }
+  .tool .idx { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .tool .name { font-family: var(--mono); font-size: 13.5px; color: var(--ink); }
+  .tool .desc { font-size: 14.5px; color: var(--ink-soft); }
+  .tool .kind {
+    font-family: var(--mono); font-size: 10.5px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    text-align: right;
+  }
+
+  /* INSTALL */
+  .install-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+  .code {
+    background: var(--bg-2);
+    color: var(--ink);
+    border-radius: 6px;
+    border: 1px solid var(--rule);
+    overflow: hidden;
+  }
+  .code .head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 18px; border-bottom: 1px solid var(--rule-soft);
+    font-family: var(--mono); font-size: 11px; color: var(--muted);
+  }
+  .code .copy { background: transparent; border: 0; color: var(--ink-soft); font-family: var(--mono); font-size: 11px; cursor: pointer; padding: 0; border-bottom: 1px solid var(--rule); padding-bottom: 1px; }
+  .code .copy:hover { color: var(--ink); border-bottom-color: var(--ink); }
+  .code pre { margin: 0; padding: 22px; font-family: var(--mono); font-size: 12.5px; line-height: 1.75; white-space: pre; overflow-x: auto; color: var(--ink-soft); }
+  .code .c-comment { color: var(--muted); }
+  .code .c-cmd { color: var(--ink); }
+  .code .c-key { color: var(--ink); }
+  .code .c-str { color: var(--ink-soft); }
+
+  /* FOOTER */
+  footer {
+    border-top: 1px solid var(--rule);
+    padding: 72px 0 56px;
+  }
+  footer .wrap {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr 1fr 1fr;
+    gap: 48px;
+  }
+  footer h5 { font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin: 0 0 18px; font-weight: 500; }
+  footer a { display: block; color: var(--ink-soft); text-decoration: none; padding: 5px 0; font-size: 14px; }
+  footer a:hover { color: var(--ink); }
+  .foot-brand { font-family: var(--serif); font-size: 40px; line-height: 1; margin: 0 0 16px; letter-spacing: -0.01em; }
+  .foot-brand em { font-style: italic; }
+  .license { color: var(--muted); font-size: 13px; line-height: 1.6; }
+
+  /* DARK TOGGLE */
+  .dark-toggle {
+    background: transparent; border: 1px solid var(--rule); border-radius: 4px;
+    color: var(--ink-soft); font-family: var(--mono); font-size: 11px;
+    padding: 5px 10px; cursor: pointer;
+  }
+  .dark-toggle:hover { color: var(--ink); border-color: var(--ink); }
+
+  /* RESPONSIVE */
+  @media (max-width: 960px) {
+    .hero-grid { grid-template-columns: 1fr; gap: 48px; }
+    .features { grid-template-columns: 1fr 1fr; }
+    .section-head { grid-template-columns: 1fr; gap: 16px; margin-bottom: 48px; }
+    .arch-row { grid-template-columns: 1fr; }
+    .arch-arrow { transform: rotate(90deg); padding: 8px 0; }
+    .install-grid { grid-template-columns: 1fr; }
+    footer .wrap { grid-template-columns: 1fr 1fr; }
+    .tool { grid-template-columns: 40px 160px 1fr; }
+    .tool .kind { display: none; }
+  }
+  @media (max-width: 620px) {
+    .features { grid-template-columns: 1fr; }
+    footer .wrap { grid-template-columns: 1fr; }
+    nav.top ul { display: none; }
+    .wrap { padding: 0 24px; }
+    .arch { padding: 28px 20px; }
+    .hero { padding: 64px 0 48px; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="top">
+  <div class="wrap">
+    <a class="brand" href="/">
+      <span class="brand-mark">s</span>
+      <span class="brand-name">scrapwell</span>
+    </a>
+    <ul>
+      <li><a href="#features">Features</a></li>
+      <li><a href="#architecture">Architecture</a></li>
+      <li><a href="#tools">Tools</a></li>
+      <li><a href="#install">Install</a></li>
+      <li><a href="/docs/getting-started/installation/">Docs</a></li>
+    </ul>
+    <button class="dark-toggle" id="dark-btn">Dark</button>
+  </div>
+</nav>
+
+<!-- HERO -->
+<header class="hero">
+  <div class="wrap">
+    <div class="hero-grid">
+      <div>
+        <span class="eyebrow">MCP memory server · v0.1 · MIT</span>
+        <h1>Memory that lives<br>in <em>plain files.</em></h1>
+        <p class="lede">
+          A minimal MCP memory server for LLM agents — and for people. No hidden LLM calls, no server to run. Just human-readable Markdown on disk, fully searchable.
+        </p>
+        <div class="hero-cta">
+          <a class="btn-link" href="#install">Install scrapwell <span class="arr">↗</span></a>
+          <a class="btn-link soft" href="/docs/getting-started/installation/">Read the docs <span class="arr">↗</span></a>
+        </div>
+        <div class="hero-meta">
+          <span>stdio</span>
+          <span>LanceDB / Tantivy</span>
+          <span>Obsidian compatible</span>
+          <span>Rust</span>
+        </div>
+      </div>
+
+      <div>
+        <div class="file">
+          <div class="file-bar">
+            <span class="file-path">~/.memory/<b>entities/rust/anyhow-vs-thiserror.md</b></span>
+          </div>
+          <div class="file-body">
+            <div class="md-h1">anyhow vs thiserror</div>
+            <div class="md-meta">
+              <span>entity: rust</span>
+              <span>updated 3m ago</span>
+            </div>
+            <div class="md-h2">when to use each</div>
+            <div class="md-li">Use <a class="wikilink">[[thiserror]]</a> for library crates — preserves typed errors for callers.</div>
+            <div class="md-li">Use <span class="tag">#anyhow</span> in binaries where the goal is "bubble up and display".</div>
+            <div class="md-h2">related</div>
+            <div class="md-li"><a class="wikilink">[[error-handling]]</a> &middot; <a class="wikilink">[[result-types]]</a></div>
+            <div class="md-li">See also <a class="wikilink">[[obsidian-vault]]</a><span class="cursor"></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- FEATURES -->
+<section id="features">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">01 — Principles</span>
+      <div>
+        <h2>Three quiet decisions.</h2>
+        <p class="lead">No lock-in, no background magic, no second source of truth. Your memory is a folder of Markdown files. Everything else is indexing on top.</p>
+      </div>
+    </div>
+
+    <div class="features">
+      <div class="feature">
+        <div class="num">01</div>
+        <h3>No hidden LLM calls.</h3>
+        <p>The calling model decides what to save and how to classify it. scrapwell stores and indexes — zero extra API cost per save.</p>
+      </div>
+      <div class="feature">
+        <div class="num">02</div>
+        <h3>Markdown as source of truth.</h3>
+        <p>Every memory is a plain .md file. Browse, edit, or grep in any editor. No proprietary database, no migration risk.</p>
+      </div>
+      <div class="feature">
+        <div class="num">03</div>
+        <h3>Obsidian compatible.</h3>
+        <p>Open the directory as a vault. Wikilinks resolve. Graph view shows how documents connect.</p>
+      </div>
+      <div class="feature">
+        <div class="num">04</div>
+        <h3>Ten tools over stdio.</h3>
+        <p>Full CRUD for entities and documents, full-text search with highlighted snippets, tree browsing, and index rebuild.</p>
+      </div>
+      <div class="feature">
+        <div class="num">05</div>
+        <h3>Pluggable search backend.</h3>
+        <p>Swap LanceDB and Tantivy via a single config field. Both live behind the same trait.</p>
+      </div>
+      <div class="feature">
+        <div class="num">06</div>
+        <h3>Entity → Topic → Document.</h3>
+        <p>A three-level hierarchy keeps things organized without rigid schemas. Topics are optional and created on demand.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ARCHITECTURE -->
+<section id="architecture">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">02 — Architecture</span>
+      <div>
+        <h2>Three levels. No schema.</h2>
+        <p class="lead">Entities are who or what. Topics group related threads. Documents are the Markdown files themselves. Markdown is the source of truth — SQLite and the search index are derived data, safe to delete and rebuild.</p>
+      </div>
+    </div>
+
+    <div class="arch">
+      <div class="arch-row">
+        <div class="arch-node">
+          <div class="lvl">Level 1 — Entity</div>
+          <h4>elasticsearch/</h4>
+          <p>A subject of knowledge — a technology, project, library, or concept. Each entity is a top-level directory.</p>
+          <ul>
+            <li>rust/</li>
+            <li>elasticsearch/</li>
+            <li>project-atlas/</li>
+          </ul>
+        </div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-node">
+          <div class="lvl">Level 2 — Topic</div>
+          <h4>mapping/</h4>
+          <p>Optional. Groups related documents under an entity. Created on demand when an entity grows beyond ~7 documents.</p>
+          <ul>
+            <li>mapping/</li>
+            <li>performance/</li>
+            <li>query-tuning/</li>
+          </ul>
+        </div>
+      </div>
+      <div style="margin-top: 24px;">
+        <div class="arch-node">
+          <div class="lvl">Level 3 — Document</div>
+          <h4>nested-dense-vector.md</h4>
+          <p>Plain Markdown with YAML front-matter. Full-text indexed. Wikilinks resolved. SQLite and the search index are derived — delete them and run <span class="mono">rebuild_index</span> to regenerate.</p>
+          <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap: 10px; font-family: var(--mono); font-size: 11.5px; color: var(--ink-soft); margin-top: 18px;">
+            <div style="border:1px solid var(--rule-soft); border-radius: 3px; padding:10px 12px;">nested-dense-vector.md</div>
+            <div style="border:1px solid var(--rule-soft); border-radius: 3px; padding:10px 12px;">dynamic-templates.md</div>
+            <div style="border:1px solid var(--rule-soft); border-radius: 3px; padding:10px 12px;">shard-sizing.md</div>
+            <div style="border:1px solid var(--rule-soft); border-radius: 3px; padding:10px 12px;">reindex-strategy.md</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TOOLS -->
+<section id="tools">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">03 — MCP tools</span>
+      <div>
+        <h2>Ten tools over stdio.</h2>
+        <p class="lead">Ten tools for storing, searching, and managing memories. No REST server, no auth dance — just MCP over stdio.</p>
+      </div>
+    </div>
+
+    <div class="tools">
+      <div class="tool"><span class="idx">01</span><span class="name">list_memories</span><span class="desc">Tree-browse entities, topics, and documents.</span><span class="kind">read</span></div>
+      <div class="tool"><span class="idx">02</span><span class="name">get_memory</span><span class="desc">Fetch a document by ID, with front-matter.</span><span class="kind">read</span></div>
+      <div class="tool"><span class="idx">03</span><span class="name">search_memory</span><span class="desc">Full-text search with highlighted snippets.</span><span class="kind">read</span></div>
+      <div class="tool"><span class="idx">04</span><span class="name">create_entity</span><span class="desc">Create a new entity with similar-name check.</span><span class="kind">write</span></div>
+      <div class="tool"><span class="idx">05</span><span class="name">update_entity</span><span class="desc">Update entity scope, description, or tags.</span><span class="kind">write</span></div>
+      <div class="tool"><span class="idx">06</span><span class="name">delete_entity</span><span class="desc">Remove an entity and all its documents (cascade).</span><span class="kind">write</span></div>
+      <div class="tool"><span class="idx">07</span><span class="name">save_memory</span><span class="desc">Save a new document under an entity.</span><span class="kind">write</span></div>
+      <div class="tool"><span class="idx">08</span><span class="name">update_memory</span><span class="desc">Partial update of a document's title, content, or tags.</span><span class="kind">write</span></div>
+      <div class="tool"><span class="idx">09</span><span class="name">delete_memory</span><span class="desc">Remove a document and its search index entry.</span><span class="kind">write</span></div>
+      <div class="tool"><span class="idx">10</span><span class="name">rebuild_index</span><span class="desc">Rebuild SQLite and search index from Markdown.</span><span class="kind">admin</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- INSTALL -->
+<section id="install">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">04 — Install</span>
+      <div>
+        <h2>One binary. One folder.</h2>
+        <p class="lead">Install with Homebrew or the shell installer, then wire it into Claude Code. That's it.</p>
+      </div>
+    </div>
+
+    <div class="install-grid">
+      <div class="code">
+        <div class="head">
+          <span>01 — install</span>
+          <button class="copy" data-copy="brew install argonism/tap/scrapwell">Copy</button>
+        </div>
+<pre><span class="c-comment"># macOS (Homebrew)</span>
+<span class="c-cmd">$ brew</span> install argonism/tap/scrapwell
+
+<span class="c-comment"># macOS / Linux (shell installer)</span>
+<span class="c-cmd">$ curl</span> --proto '=https' --tlsv1.2 -LsSf \
+  https://github.com/argonism/scrapwell/releases/\
+latest/download/scrapwell-installer.sh | sh</pre>
+      </div>
+      <div class="code">
+        <div class="head">
+          <span>02 — wire into Claude Code</span>
+          <button class="copy" data-copy="claude mcp add scrapwell --scope user scrapwell serve">Copy</button>
+        </div>
+<pre><span class="c-cmd">$ claude</span> mcp add scrapwell \
+    --scope user \
+    scrapwell serve
+
+<span class="c-comment"># optional: project-local memory root</span>
+<span class="c-comment"># .scrapwell.toml at repo root:</span>
+<span class="c-key">root</span> = <span class="c-str">"./memory"</span></pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="wrap">
+    <div>
+      <div class="foot-brand"><em>scrapwell.</em></div>
+      <div class="license">MIT License · Built with Rust.<br>A small tool for a stubbornly open memory.</div>
+    </div>
+    <div>
+      <h5>Project</h5>
+      <a href="https://github.com/argonism/scrapwell">GitHub</a>
+      <a href="https://github.com/argonism/scrapwell/releases">Releases</a>
+      <a href="https://github.com/argonism/scrapwell/issues">Issues</a>
+    </div>
+    <div>
+      <h5>Docs</h5>
+      <a href="/docs/getting-started/installation/">Getting started</a>
+      <a href="/docs/tools/overview/">MCP tools</a>
+      <a href="/docs/configuration/config-reference/">Configuration</a>
+      <a href="/docs/concepts/obsidian/">Obsidian guide</a>
+    </div>
+    <div>
+      <h5>Learn</h5>
+      <a href="/docs/concepts/data-model/">Data model</a>
+      <a href="/docs/architecture/internals/">Internals</a>
+      <a href="https://github.com/argonism/scrapwell/blob/main/LICENSE">License</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // Dark mode toggle
+  const btn = document.getElementById('dark-btn');
+  const html = document.documentElement;
+  const stored = localStorage.getItem('scrapwell-theme');
+  if (stored === 'dark') { html.classList.add('dark'); btn.textContent = 'Light'; }
+
+  btn.addEventListener('click', () => {
+    const dark = html.classList.toggle('dark');
+    btn.textContent = dark ? 'Light' : 'Dark';
+    localStorage.setItem('scrapwell-theme', dark ? 'dark' : 'light');
+  });
+
+  // Copy buttons
+  document.querySelectorAll('.copy').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const txt = btn.dataset.copy || '';
+      try { await navigator.clipboard.writeText(txt); } catch(e) {}
+      const prev = btn.textContent;
+      btn.textContent = 'Copied';
+      setTimeout(() => btn.textContent = prev, 1200);
+    });
+  });
+</script>
+</body>
+</html>
