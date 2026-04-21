@@ -1,6 +1,6 @@
 [package]
 name = "scrapwell"
-version = "0.1.3"
+version = "0.1.4"
 edition = "2021"
 description = "MCP memory server for LLM agents"
 homepage = "https://github.com/argonism/scrapwell"
