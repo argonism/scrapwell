@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{path::PathBuf, thread, time::Duration};
 
 use tantivy::{
     collector::TopDocs,
@@ -112,15 +112,31 @@ impl TantivySearchIndex {
     /// release the Tantivy lockfile. This allows multiple scrapwell processes
     /// to coexist — each holds the lock only for the duration of a single
     /// write operation.
+    ///
+    /// If the lockfile is already held by another process, retries up to 5
+    /// times with 200ms back-off (total wait ~1s).
     fn with_writer<F, T>(&self, f: F) -> Result<T>
     where
         F: FnOnce(&mut IndexWriter) -> Result<T>,
     {
-        let mut writer = self.index.writer(50_000_000).map_err(into_search_err)?;
-        let result = f(&mut writer);
-        // Drop the writer to release the lockfile regardless of success/failure.
-        drop(writer);
-        result
+        const MAX_RETRIES: u32 = 5;
+        const RETRY_INTERVAL: Duration = Duration::from_millis(200);
+
+        let mut last_err = None;
+        for _ in 0..MAX_RETRIES {
+            match self.index.writer(50_000_000) {
+                Ok(mut writer) => {
+                    let result = f(&mut writer);
+                    drop(writer);
+                    return result;
+                }
+                Err(e) => {
+                    last_err = Some(e);
+                    thread::sleep(RETRY_INTERVAL);
+                }
+            }
+        }
+        Err(into_search_err(last_err.unwrap()))
     }
 }
 
