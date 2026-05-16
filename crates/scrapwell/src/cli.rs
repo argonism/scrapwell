@@ -46,6 +46,12 @@ pub enum Commands {
         #[arg(long)]
         json: bool,
     },
+    /// Show the config files being read and their contents
+    Config {
+        /// Output in JSON format
+        #[arg(long)]
+        json: bool,
+    },
 }
 
 #[derive(Subcommand)]
